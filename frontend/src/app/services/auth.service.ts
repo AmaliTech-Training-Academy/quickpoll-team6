@@ -1,44 +1,51 @@
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable, tap } from "rxjs";
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
+import { User } from '@/models';
+import { API_BASE_URL } from '@/constants';
 
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = "/api/auth";
-
-  constructor(private http: HttpClient) {}
+  private readonly AUTH_TOKEN_KEY = 'quickpoll-auth-token';
+  private readonly authApiUrl = `${API_BASE_URL}/auth`;
+  private readonly usersApiUrl = `${API_BASE_URL}/users`;
+  private readonly http = inject(HttpClient);
 
   login(email: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/login`, { email, password })
-      .pipe(tap((res: any) => {
-        localStorage.setItem("token", res.token);
-        localStorage.setItem("user", JSON.stringify({ name: res.name, email: res.email, role: res.role }));
-      }));
+    return this.http.post(`${this.authApiUrl}/login`, { email, password }).pipe(
+      tap((res: any) => {
+        localStorage.setItem(this.AUTH_TOKEN_KEY, res.token);
+      }),
+    );
   }
 
-  register(name: string, email: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, { name, email, password })
-      .pipe(tap((res: any) => {
-        localStorage.setItem("token", res.token);
-        localStorage.setItem("user", JSON.stringify({ name: res.name, email: res.email, role: res.role }));
-      }));
+  register(name: string, email: string, password: string, departmentId?: number): Observable<any> {
+    return this.http
+      .post(`${this.authApiUrl}/register`, { name, email, password, departmentId })
+      .pipe(
+        tap((res: any) => {
+          localStorage.setItem(this.AUTH_TOKEN_KEY, res.token);
+        }),
+      );
   }
 
   logout(): void {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem(this.AUTH_TOKEN_KEY);
   }
 
   isLoggedIn(): boolean {
-    return !!localStorage.getItem("token");
+    return !!this.getToken();
   }
 
   getToken(): string | null {
-    return localStorage.getItem("token");
+    return localStorage.getItem(this.AUTH_TOKEN_KEY);
   }
 
-  getUser(): any {
-    const u = localStorage.getItem("user");
-    return u ? JSON.parse(u) : null;
+  getProfile(): Observable<User> {
+    return this.http.get<User>(`${this.usersApiUrl}/me`);
+  }
+
+  updateUser(name: string): Observable<User> {
+    return this.http.put<User>(this.usersApiUrl, { name });
   }
 }
