@@ -1,5 +1,5 @@
 import { Router, RouterLink } from '@angular/router';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -21,7 +21,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
 
 @Component({
   selector: 'app-register',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, InputComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="max-w-100 m-15 mx-auto flex flex-col">
@@ -113,7 +113,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
                 <span>Password is required.</span>
               }
               @if (registerForm.get('password')?.errors?.['minlength']) {
-                <span>Password must be at least 6 characters.</span>
+                <span>Password must be at least 8 characters.</span>
               }
             </div>
           }
@@ -175,7 +175,7 @@ export class RegisterComponent {
       firstName: ['', [Validators.required]],
       lastName: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordMatchValidator },
