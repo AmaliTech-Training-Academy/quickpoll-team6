@@ -2,8 +2,8 @@ package com.amalitech.quickpoll.service;
 
 import com.amalitech.quickpoll.config.JwtService;
 import com.amalitech.quickpoll.dto.*;
+import com.amalitech.quickpoll.mapper.AuthMapper;
 import com.amalitech.quickpoll.model.User;
-import com.amalitech.quickpoll.model.enums.Role;
 import com.amalitech.quickpoll.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,22 +15,16 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuthMapper authMapper;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
-                .build();
+        User user = authMapper.toEntity(request, passwordEncoder.encode(request.getPassword()));
         userRepository.save(user);
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return AuthResponse.builder()
-                .token(token).email(user.getEmail())
-                .name(user.getName()).role(user.getRole().name()).build();
+        return authMapper.toResponse(user, token);
     }
 
     public AuthResponse login(AuthRequest request) {
@@ -40,8 +34,6 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
         }
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return AuthResponse.builder()
-                .token(token).email(user.getEmail())
-                .name(user.getName()).role(user.getRole().name()).build();
+        return authMapper.toResponse(user, token);
     }
 }
