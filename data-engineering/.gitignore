@@ -1,5 +1,6 @@
 .venv
 .env
+ca-certificate.crt
 docker-compose.kafka-dev.yml
 skills/
 copilot-instructions.md

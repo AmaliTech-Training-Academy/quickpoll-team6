@@ -15,6 +15,7 @@ from data_engineering.config import (
     KAFKA_TOPIC_POLL_EVENTS,
     KAFKA_TOPIC_VOTE_EVENTS,
     get_engine,
+    get_kafka_security_config,
 )
 from data_engineering.loading.models import dead_letter_events
 
@@ -28,17 +29,23 @@ def create_consumer() -> KafkaConsumer:
     auto_offset_reset="earliest" ensures no events are missed on restart.
     enable_auto_commit=False lets the pipeline commit only after a successful
     DB write, providing at-least-once delivery guarantees.
+
+    Uses SASL_SSL when KAFKA_SASL_USERNAME is set (e.g. Digital Ocean Kafka).
     """
+    common = {
+        "bootstrap_servers": KAFKA_BOOTSTRAP_SERVERS,
+        "group_id": KAFKA_GROUP_ID,
+        "auto_offset_reset": "earliest",
+        "enable_auto_commit": False,
+        "max_poll_records": 50,
+        "max_poll_interval_ms": 600_000,  # 10 min — each event triggers DB I/O
+        "value_deserializer": lambda m: json.loads(m.decode("utf-8")),
+        **get_kafka_security_config(),
+    }
     return KafkaConsumer(
         KAFKA_TOPIC_VOTE_EVENTS,
         KAFKA_TOPIC_POLL_EVENTS,
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id=KAFKA_GROUP_ID,
-        auto_offset_reset="earliest",
-        enable_auto_commit=False,
-        max_poll_records=50,
-        max_poll_interval_ms=600_000,  # 10 min — each event triggers DB I/O
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+        **common,
     )
 
 

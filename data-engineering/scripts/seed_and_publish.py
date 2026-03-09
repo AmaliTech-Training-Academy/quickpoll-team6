@@ -32,6 +32,7 @@ from data_engineering.config import (  # noqa: E402
     KAFKA_TOPIC_POLL_EVENTS,
     KAFKA_TOPIC_VOTE_EVENTS,
     get_engine,
+    get_kafka_security_config,
 )
 from data_engineering.utils.logging import configure_logging  # noqa: E402
 
@@ -327,6 +328,7 @@ def make_producer() -> KafkaProducer:
     return KafkaProducer(
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        **get_kafka_security_config(),
     )
 
 
