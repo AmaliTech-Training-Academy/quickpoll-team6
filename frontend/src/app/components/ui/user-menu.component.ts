@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
@@ -6,7 +6,7 @@ import { ButtonComponent } from './button.component';
 
 @Component({
   selector: 'app-user-menu',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, RouterLink, AsyncPipe],
   template: `
     <button

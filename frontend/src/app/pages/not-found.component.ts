@@ -1,10 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { ButtonComponent } from '@/components/ui/button.component';
 
 @Component({
   selector: 'app-not-found',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent],
   template: `
     <div class="h-screen grid place-items-center">

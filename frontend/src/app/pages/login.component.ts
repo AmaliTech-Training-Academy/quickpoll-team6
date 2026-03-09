@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
@@ -8,7 +8,7 @@ import { InputComponent } from '@/components/ui/input.component';
 
 @Component({
   selector: 'app-login',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, InputComponent, ReactiveFormsModule, RouterLink],
   template: `
     <div class="max-w-100 m-15 mx-auto flex flex-col">

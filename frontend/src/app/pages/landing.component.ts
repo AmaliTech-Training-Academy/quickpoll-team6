@@ -1,10 +1,10 @@
 import { ButtonComponent } from '@/components/ui/button.component';
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-landing',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, ButtonComponent],
   template: `
     <div class="grid min-h-screen place-items-center">

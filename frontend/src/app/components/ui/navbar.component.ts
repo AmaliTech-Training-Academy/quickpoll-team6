@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SidebarButtonComponent } from './sidebar-button.component';
 
 export interface SidebarLink {
@@ -8,7 +8,7 @@ export interface SidebarLink {
 
 @Component({
   selector: 'app-secondary-navbar',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SidebarButtonComponent],
   template: `
     <nav class="flex gap-1 pb-5">

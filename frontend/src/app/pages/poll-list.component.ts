@@ -1,11 +1,11 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { PollService } from '@/services/poll.service';
 import { ContentHeaderComponent } from '@/components/ui/content-header.component';
 
 @Component({
   selector: 'app-poll-list',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DecimalPipe, ContentHeaderComponent],
   template: `
     <div>

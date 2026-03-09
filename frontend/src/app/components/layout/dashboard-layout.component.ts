@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
@@ -15,7 +16,7 @@ import { UserMenuComponent } from '../ui/user-menu.component';
 
 @Component({
   selector: 'app-layout',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, UserMenuComponent],
   template: `
     <div class="flex flex-col min-h-screen">

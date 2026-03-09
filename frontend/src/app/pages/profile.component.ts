@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
@@ -8,7 +8,7 @@ import { InputComponent } from '@/components/ui/input.component';
 
 @Component({
   selector: 'app-profile',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, InputComponent, FormsModule],
   template: `
     <div class="flex max-lg:flex-col gap-16">

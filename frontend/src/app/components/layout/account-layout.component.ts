@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ContentHeaderComponent } from '@/components/ui/content-header.component';
 import { SecondaryNavbarComponent } from '../ui/navbar.component';
 
 @Component({
   selector: 'app-account',
-  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ContentHeaderComponent, SecondaryNavbarComponent, RouterOutlet],
   template: `
     <app-content-header title="Account" />
