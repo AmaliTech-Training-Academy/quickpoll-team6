@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
 from kafka import KafkaConsumer
+from sqlalchemy import select
 
 from data_engineering.config import (
     KAFKA_BOOTSTRAP_SERVERS,
