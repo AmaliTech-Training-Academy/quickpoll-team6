@@ -26,26 +26,20 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AuthMapper authMapper;
 
-    public AuthServiceResponse register(RegisterRequest request) {
-        try {
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new EmailAlreadyRegistered("Email already registered");
-            }
-            User user = authMapper.toUser(request);
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setRole(Role.USER);
-            userRepository.save(user);
-
-            String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-            String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole().name());
-
-            return authMapper.toAuthServiceResponse(token, refreshToken, user.getEmail(), user.getFullName(), user.getRole().name());
-        } catch (EmailAlreadyRegistered e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("Registration failed: " + e.getMessage());
-        }
+   public AuthServiceResponse register(RegisterRequest request) {
+    if (userRepository.existsByEmail(request.getEmail())) {
+        throw new EmailAlreadyRegistered("Email already registered");
     }
+    User user = authMapper.toUser(request);
+    user.setPassword(passwordEncoder.encode(request.getPassword()));
+    user.setRole(Role.USER);
+    userRepository.save(user);
+
+    String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+    String refreshToken = jwtService.generateRefreshToken(user.getEmail(), user.getRole().name());
+
+    return authMapper.toAuthServiceResponse(token, refreshToken, user.getEmail(), user.getFullName(), user.getRole().name());
+}
 
     public AuthServiceResponse login(AuthRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -54,9 +48,6 @@ public class AuthService {
                         request.getPassword()
                 )
         );
-        if(!authentication.isAuthenticated()) {
-            throw new BadCredentialsException("Invalid credentials");
-        }
         User user = (User) authentication.getPrincipal();
 
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
