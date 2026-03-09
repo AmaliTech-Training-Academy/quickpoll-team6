@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { PollListComponent } from './pages/poll-list.component';
 import { LoginComponent } from './pages/login.component';
 import { RegisterComponent } from './pages/register.component';
-import { CreatePollComponent } from './pages/create-poll.component';
+// import { CreatePollComponent } from './pages/create-poll.component';
 import { NotFoundComponent } from './pages/not-found.component';
 import { LandingComponent } from './pages/landing.component';
 import { ProfileComponent } from './pages/profile.component';
@@ -31,8 +31,8 @@ export const routes: Routes = [
         path: 'polls',
         children: [
           { path: '', component: PollListComponent },
-          { path: ':id', component: PollListComponent },
-          { path: 'new', component: CreatePollComponent },
+          // { path: ':id', component: PollListComponent },
+          // { path: 'new', component: CreatePollComponent },
         ],
       },
       {
@@ -41,8 +41,8 @@ export const routes: Routes = [
         children: [
           { path: '', redirectTo: 'profile', pathMatch: 'full' },
           { path: 'profile', component: ProfileComponent },
-          { path: 'teams', component: CreatePollComponent },
-          { path: 'settings', component: PollListComponent },
+          // { path: 'teams', component: CreatePollComponent },
+          // { path: 'settings', component: PollListComponent },
         ],
       },
     ],
