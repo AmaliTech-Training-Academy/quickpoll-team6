@@ -101,7 +101,6 @@ class AuthServiceTest {
         response.setToken("token");
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
         when(authentication.getPrincipal()).thenReturn(user);
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("token");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("refreshToken");
