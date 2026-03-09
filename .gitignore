@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────────────────────
+# QuickPoll — Git Ignore
+# ──────────────────────────────────────────────────────────────
+
+# ── Environment files (contain secrets) ───────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── OS files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE / Editor ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+
+# ── Java / Maven ──────────────────────────────────────────────
+backend/target/
+qa/api-tests/target/
+qa/ui-tests/target/
+*.class
+*.jar
+
+# ── Node / Angular ────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# ── Python ────────────────────────────────────────────────────
+data-engineering/__pycache__/
+data-engineering/*.pyc
+data-engineering/.venv/
+
+# ── Docker ────────────────────────────────────────────────────
+*.log
+*Makefile 

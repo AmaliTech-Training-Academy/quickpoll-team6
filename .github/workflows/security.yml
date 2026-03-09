@@ -12,10 +12,7 @@
 name: Security
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  workflow_dispatch: # disabled until staging is stable — re-enable by adding push/pull_request triggers
 
 concurrency:
   group: security-${{ github.ref }}

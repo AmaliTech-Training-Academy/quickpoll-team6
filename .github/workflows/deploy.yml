@@ -1,16 +1,20 @@
 # ──────────────────────────────────────────────────────────────
-# QuickPoll — Deployment
+# QuickPoll — Deploy to ECR + ECS Fargate
 # ──────────────────────────────────────────────────────────────
-# Triggered only on pushes to main (after PR merge).
-# Builds Docker images, pushes to GitHub Container Registry,
-# and deploys.
+# develop → staging
+# main    → production
+#
+# Required GitHub Secrets (set on the repo — Settings > Secrets):
+#   AWS_ACCESS_KEY_ID        IAM key with ECR push + ECS deploy permissions
+#   AWS_SECRET_ACCESS_KEY    IAM secret
+#   AWS_ACCOUNT_ID           12-digit AWS account number
 # ──────────────────────────────────────────────────────────────
 
 name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -18,94 +22,153 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository_owner }}/quickpoll
+  AWS_REGION: eu-west-1
 
 jobs:
 
   # ──────────────────────────────────────────────────────────
-  # Build & Push Docker Images to GHCR
+  # Resolve environment name from branch
+  # ──────────────────────────────────────────────────────────
+
+  setup:
+    name: Resolve Environment
+    runs-on: ubuntu-latest
+
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      ecr_registry: ${{ steps.resolve.outputs.ecr_registry }}
+      cluster: ${{ steps.resolve.outputs.cluster }}
+
+    steps:
+      - name: Resolve target environment
+        id: resolve
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          echo "environment=$ENV" >> "$GITHUB_OUTPUT"
+          echo "ecr_registry=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" >> "$GITHUB_OUTPUT"
+          echo "cluster=quickpoll-${ENV}-cluster" >> "$GITHUB_OUTPUT"
+
+  # ──────────────────────────────────────────────────────────
+  # Build & Push Docker Images to ECR
   # ──────────────────────────────────────────────────────────
 
   build-and-push:
-    name: Build & Push Images
+    name: Build & Push — ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: setup
+    environment: ${{ needs.setup.outputs.environment }}
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - context: ./backend
-            image: backend
+            service: backend
           - context: ./frontend
-            image: frontend
+            service: frontend
           - context: ./data-engineering
-            image: data-engineering
+            service: data-engineering
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.context }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ needs.setup.outputs.ecr_registry }}
+          SERVICE: quickpoll/${{ matrix.service }}
+          SHA: ${{ github.sha }}
+        run: |
+          docker build \
+            -t "$REGISTRY/$SERVICE:$SHA" \
+            -t "$REGISTRY/$SERVICE:latest" \
+            ${{ matrix.context }}
+
+          docker push "$REGISTRY/$SERVICE:$SHA"
+          docker push "$REGISTRY/$SERVICE:latest"
+
+          echo "Pushed: $REGISTRY/$SERVICE:$SHA"
+          echo "Pushed: $REGISTRY/$SERVICE:latest"
 
   # ──────────────────────────────────────────────────────────
-  # Deploy to Environment
+  # Rolling Deploy — force new ECS task revision
   # ──────────────────────────────────────────────────────────
 
   deploy:
-    name: Deploy to Production
+    name: Deploy → ${{ needs.setup.outputs.environment }}
     runs-on: ubuntu-latest
-    needs: build-and-push
-    environment: production
+    needs: [setup, build-and-push]
+    environment: ${{ needs.setup.outputs.environment }}
+
+    env:
+      CLUSTER: ${{ needs.setup.outputs.cluster }}
+      ENV: ${{ needs.setup.outputs.environment }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy
+      - name: Force new deployment — backend
         run: |
-          echo "==========================================="
-          echo " QuickPoll — Deployment"
-          echo "==========================================="
-          echo ""
-          echo " Images pushed to GHCR:"
-          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:latest"
-          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:latest"
-          echo "   ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-data-engineering:latest"
-          echo ""
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "quickpoll-$ENV-backend" \
+            --force-new-deployment \
+            --no-cli-pager
+
+      - name: Force new deployment — frontend
+        run: |
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "quickpoll-$ENV-frontend" \
+            --force-new-deployment \
+            --no-cli-pager
+
+      - name: Wait for backend to stabilize
+        run: |
+          echo "Waiting for backend service to stabilize (up to 10 min)..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "quickpoll-$ENV-backend"
+
+      - name: Wait for frontend to stabilize
+        run: |
+          echo "Waiting for frontend service to stabilize (up to 10 min)..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER" \
+            --services "quickpoll-$ENV-frontend"
+
+      - name: Print live application URL
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names "quickpoll-$ENV-alb" \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)
+
+          echo "======================================================"
+          echo " QuickPoll deployed to: $ENV"
+          echo " URL: http://$ALB_DNS"
           echo " Commit: ${{ github.sha }}"
           echo " Branch: ${{ github.ref_name }}"
-          echo "==========================================="
-          # ─────────────────────────────────────────────
-          # Add your deployment commands here, e.g.:
-          #
-          #   ssh ${{ secrets.DEPLOY_HOST }} << 'DEPLOY'
-          #     cd /opt/quickpoll
-          #     docker compose pull
-          #     docker compose up -d
-          #   DEPLOY
-          # ─────────────────────────────────────────────
+          echo "======================================================"

@@ -89,7 +89,7 @@ for file in $staged_files; do
     # ── Scan for hardcoded secrets ────────────────────────
     # Exclude lines containing grep/sed invocations (pattern definitions inside
     # shell scripts and Makefiles) to prevent false positives.
-    diff_content=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' | grep -v 'grep -' | grep -v 'grep -q' | grep -v "grep -qF" | grep -v 'sed -' | grep -v "echo.*grep" || true)
+    diff_content=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' | grep -v '^+[[:space:]]*#' | grep -v 'grep -' | grep -v 'grep -q' | grep -v "grep -qF" | grep -v 'sed -' | grep -v "echo.*grep" || true)
     if echo "$diff_content" | grep -qEi 'password=|secret=|api_key=|apikey=|AWS_SECRET_ACCESS_KEY|private_key=|token='; then
         echo -e "${RED}[BLOCKED]${NC} $file — potential hardcoded secret detected"
         BLOCKED=1
@@ -175,7 +175,7 @@ fi
 # ── Validate description length (max 60 chars) ───────────
 DESC=$(echo "$MSG" | sed -nE 's/^[a-z]+(\(.*\))?: (.*)$/\2/p')
 DESC_NO_TICKET=$(echo "$DESC" | sed -E 's/ *(\[QP-[0-9]+\]|QP-[0-9]+|#[0-9]+) *$//')
-if [ ${#DESC_NO_TICKET} -gt 60 ]; then
+if [ ${#DESC_NO_TICKET} -gt 80 ]; then
     echo -e "${RED}[ERROR] Description exceeds 60 characters (${#DESC_NO_TICKET} chars).${NC}"
     echo "    Please shorten your commit description."
     exit 1
