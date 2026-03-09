@@ -1,28 +1,23 @@
 package com.amalitech.quickpoll.mapper;
 
-import com.amalitech.quickpoll.dto.*;
+import com.amalitech.quickpoll.dto.AuthResponse;
+import com.amalitech.quickpoll.dto.AuthServiceResponse;
+import com.amalitech.quickpoll.dto.RegisterRequest;
 import com.amalitech.quickpoll.model.User;
-import com.amalitech.quickpoll.model.enums.Role;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class AuthMapper {
+@Mapper(componentModel = "spring")
+public interface AuthMapper {
 
-    public User toEntity(RegisterRequest request, String encodedPassword) {
-        User user = new User();
-        user.setFullName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(encodedPassword);
-        user.setRole(Role.USER);
-        return user;
-    }
+    @Mapping(target = "fullName", source = "name")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "password", ignore = true)
+    User toUser(RegisterRequest request);
 
-    public AuthResponse toResponse(User user, String token) {
-        AuthResponse response = new AuthResponse();
-        response.setToken(token);
-        response.setEmail(user.getEmail());
-        response.setName(user.getFullName());
-        response.setRole(user.getRole().name());
-        return response;
-    }
+    AuthServiceResponse toAuthServiceResponse(String token, String refreshToken, String email, String name, String role);
+
+    AuthResponse toAuthResponse(AuthServiceResponse serviceResponse);
 }
