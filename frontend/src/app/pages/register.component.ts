@@ -9,7 +9,7 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 
-import { AuthService } from '../services/auth.service';
+import { AuthService } from '@/services/auth.service';
 import { ButtonComponent } from '@/components/ui/button.component';
 import { InputComponent } from '@/components/ui/input.component';
 
