@@ -11,6 +11,7 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Text,
     UniqueConstraint,
     text,
 )
@@ -72,6 +73,16 @@ pipeline_watermarks = Table(
     Column("entity_name", String(50), primary_key=True),
     Column("high_watermark", DateTime, nullable=False),
     Column("updated_at", DateTime, server_default=text("NOW()")),
+)
+
+dead_letter_events = Table(
+    "dead_letter_events",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("event_type", String(50)),
+    Column("raw_payload", Text, nullable=False),  # JSON stored as text
+    Column("error_message", String(500)),
+    Column("created_at", DateTime, server_default=text("NOW()")),
 )
 
 
