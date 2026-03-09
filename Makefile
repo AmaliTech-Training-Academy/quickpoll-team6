@@ -89,7 +89,7 @@ for file in $staged_files; do
     # ── Scan for hardcoded secrets ────────────────────────
     # Exclude lines containing grep/sed invocations (pattern definitions inside
     # shell scripts and Makefiles) to prevent false positives.
-    diff_content=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' | grep -v '^+[[:space:]]*#' | grep -v 'grep -' | grep -v 'grep -q' | grep -v "grep -qF" | grep -v 'sed -' | grep -v "echo.*grep" || true)
+    diff_content=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' | grep -v '^+[[:space:]]*#' | grep -v 'grep -' | grep -v 'grep -q' | grep -v "grep -qF" | grep -v 'sed -' | grep -v "echo.*grep" | grep -v '\${{' || true)
     if echo "$diff_content" | grep -qEi 'password=|secret=|api_key=|apikey=|AWS_SECRET_ACCESS_KEY|private_key=|token='; then
         echo -e "${RED}[BLOCKED]${NC} $file — potential hardcoded secret detected"
         BLOCKED=1

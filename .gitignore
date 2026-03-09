@@ -37,4 +37,4 @@ data-engineering/.venv/
 
 # ── Docker ────────────────────────────────────────────────────
 *.log
-*Makefile 
+Makefile 
