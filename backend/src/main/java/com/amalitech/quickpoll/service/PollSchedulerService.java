@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class PollSchedulerService {
     private final PollRepository pollRepository;
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 360000)
     @Transactional
     public void closeExpiredPolls() {
         LocalDateTime now = LocalDateTime.now();

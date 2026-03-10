@@ -42,6 +42,10 @@ public class PollService {
 
     @Transactional
     public PollResponse createPoll(PollRequest request, User creator) {
+        if (request.isMultipleChoice() && request.getMaxSelections() == null) {
+            throw new IllegalArgumentException("Maximum selections must be specified for multiple choice polls");
+        }
+        
         Poll poll = pollMapper.toEntity(request, creator);
         log.info("Creating poll: {}", poll);
         Poll savedPoll = pollRepository.save(poll);
@@ -54,7 +58,8 @@ public class PollService {
                     return option;
                 })
                 .toList();
-        optionRepository.saveAll(options);
+        List<PollOption> savedOptions = optionRepository.saveAll(options);
+        savedPoll.setOptions(savedOptions);
 
         List<Department> departments = departmentRepository.findAllByIdInWithMembers(request.getDepartmentIds());
         log.info("Found {} departments for IDs: {}", departments.size(), request.getDepartmentIds());
@@ -115,21 +120,18 @@ public class PollService {
         return toResponse(poll);
     }
 
+    public Page<PollBasicResponse> getEntitledPolls(String email, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return pollRepository.findEntitledPollsByEmail(email, pageable)
+                .map(this::toBasicResponse);
+    }
+
     private PollResponse toResponse(Poll poll) {
         List<PollOption> options = poll.getOptions();
-        List<Long> optionIds = options.stream().map(PollOption::getId).toList();
-
-        java.util.Map<Long, Integer> voteCounts = voteRepository.countVotesByOptionIds(optionIds)
-                .stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        result -> (Long) result[0],
-                        result -> ((Number) result[1]).intValue()
-                ));
-
-        int totalVotes = voteCounts.values().stream().mapToInt(Integer::intValue).sum();
+        int totalVotes = options.stream().mapToInt(PollOption::getVoteCount).sum();
 
         List<OptionResponse> optionResponses = options.stream().map(o -> {
-            int count = voteCounts.getOrDefault(o.getId(), 0);
+            int count = o.getVoteCount();
             OptionResponse response = pollOptionMapper.toResponse(o);
             response.setVoteCount(count);
             response.setPercentage(totalVotes > 0 ? (count * 100.0 / totalVotes) : 0);
@@ -138,6 +140,25 @@ public class PollService {
 
         PollResponse response = pollMapper.toResponse(poll);
         response.setTotalVotes(totalVotes);
+        response.setOptions(optionResponses);
+        return response;
+    }
+
+    private PollBasicResponse toBasicResponse(Poll poll) {
+        List<OptionBasicResponse> optionResponses = poll.getOptions().stream()
+                .map(o -> new OptionBasicResponse(o.getId(), o.getOptionText()))
+                .toList();
+
+        PollBasicResponse response = new PollBasicResponse();
+        response.setId(poll.getId());
+        response.setTitle(poll.getTitle());
+        response.setQuestion(poll.getQuestion());
+        response.setDescription(poll.getDescription());
+        response.setCreatorName(poll.getCreator().getFullName());
+        response.setMultipleChoice(poll.isMultiSelect());
+        response.setExpiresAt(poll.getExpiresAt());
+        response.setStatus(poll.isActive() ? "ACTIVE" : "CLOSED");
+        response.setCreatedAt(poll.getCreatedAt());
         response.setOptions(optionResponses);
         return response;
     }

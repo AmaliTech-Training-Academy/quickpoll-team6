@@ -29,6 +29,15 @@ public class PollController {
         return ResponseEntity.ok(pollService.getAllPolls(page, size));
     }
 
+    @GetMapping("/my-polls")
+    @Operation(summary = "Get my entitled polls", description = "Retrieve polls where the authenticated user is invited to participate")
+    public ResponseEntity<Page<PollBasicResponse>> getMyEntitledPolls(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(pollService.getEntitledPolls(user.getEmail(), page, size));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get poll by ID", description = "Retrieve a specific poll by its ID")
     public ResponseEntity<PollResponse> getPollById(@PathVariable Long id) {

@@ -10,6 +10,9 @@ import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PollRequest {
+    @NotBlank(message = "Title is required")
+    @Size(max = 255, message = "Title cannot exceed 255 characters")
+    private String title;
     @NotBlank(message = "Question is required")
     @Size(max = 255, message = "Question cannot exceed 255 characters")
     private String question;
@@ -17,6 +20,7 @@ public class PollRequest {
     @NotEmpty(message = "At least one option is required")
     private List<String> options;
     private boolean multipleChoice;
+    private Integer maxSelections;
     @NotNull(message = "Anonymity must be specified")
     private Boolean anonymous;
     @NotEmpty(message = "At least one department must be invited")

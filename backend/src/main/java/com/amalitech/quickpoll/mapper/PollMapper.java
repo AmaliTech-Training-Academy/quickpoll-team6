@@ -19,15 +19,16 @@ public interface PollMapper {
     PollResponse toResponse(Poll poll);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "title", source = "request.title")
     @Mapping(target = "question", source = "request.question")
     @Mapping(target = "description", source = "request.description")
     @Mapping(target = "multiSelect", source = "request.multipleChoice")
+    @Mapping(target = "maxSelections", source = "request.maxSelections")
     @Mapping(target = "creator", source = "creator")
     @Mapping(target = "options", ignore = true)
     @Mapping(target = "invites", ignore = true)
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "expiresAt", source = "request.expiresAt")
-    @Mapping(target = "title", ignore = true)
     Poll toEntity(PollRequest request, User creator);
 }

@@ -16,13 +16,16 @@ import java.util.Optional;
 public interface PollRepository extends JpaRepository<Poll, Long> {
     Page<Poll> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-    @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options ORDER BY p.createdAt DESC")
+    @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator ORDER BY p.createdAt DESC")
     List<Poll> findAllWithOptions();
 
-    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options WHERE p.id = :id")
+    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id = :id")
     Optional<Poll> findByIdWithOptions(@Param("id") Long id);
 
     List<Poll> findByCreatorIdOrderByCreatedAtDesc(Long creatorId);
+
+    @Query("SELECT DISTINCT p FROM Poll p JOIN FETCH p.options JOIN FETCH p.creator JOIN p.invites i JOIN i.departmentMember dm WHERE dm.email = :email ORDER BY p.createdAt DESC")
+    Page<Poll> findEntitledPollsByEmail(@Param("email") String email, Pageable pageable);
 
     @Modifying
     @Query("UPDATE Poll p SET p.active = false WHERE p.active = true AND p.expiresAt <= :now")

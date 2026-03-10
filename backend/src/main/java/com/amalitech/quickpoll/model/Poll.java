@@ -42,6 +42,9 @@ public class Poll {
     @Column(name = "multi_select")
     private boolean multiSelect;
 
+    @Column(name = "max_selections")
+    private Integer maxSelections;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
