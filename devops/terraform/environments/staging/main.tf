@@ -128,7 +128,7 @@ module "ecs" {
 
   services = {
     backend = {
-      image          = "${module.ecr.repository_urls["backend"]}:${local.environment}"
+      image          = "${module.ecr.repository_urls["backend"]}:latest"
       cpu            = 512
       memory         = 1024
       container_port = 8080
@@ -150,7 +150,7 @@ module "ecs" {
     }
 
     frontend = {
-      image          = "${module.ecr.repository_urls["frontend"]}:${local.environment}"
+      image          = "${module.ecr.repository_urls["frontend"]}:latest"
       cpu            = 256
       memory         = 512
       container_port = 80
