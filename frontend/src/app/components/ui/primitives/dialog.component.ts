@@ -32,51 +32,53 @@ import {
   `,
   styles: `
     :host {
-      background-color: rgb(0 0 0 / 0.5);
-      backdrop-filter: blur(4px);
+      background-color: rgb(0 0 0 / 0.4);
+      backdrop-filter: blur(1px);
       position: fixed;
       inset: 0;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 1rem;
-      animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeIn 150ms cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 50;
     }
 
     :host[data-exit] {
-      animation: fadeOut 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeOut 50ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     [ngpDialog] {
-      width: min(100%, 32rem);
+      width: min(100%, 34rem);
       background-color: var(--surface);
       color: var(--foreground);
       border: 1px solid var(--border);
-      padding: 1.5rem;
-      border-radius: calc(var(--radius) + 4px);
+      border-radius: 14px;
       box-shadow:
-        0 10px 15px -3px rgb(0 0 0 / 0.08),
-        0 4px 6px -4px rgb(0 0 0 / 0.08);
+        0 18px 40px -12px rgb(0 0 0 / 0.18),
+        0 8px 18px -10px rgb(0 0 0 / 0.12);
       animation: slideIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
       box-sizing: border-box;
+      overflow: hidden;
     }
 
     [ngpDialog][data-exit] {
-      animation: slideOut 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      animation: slideOut 50ms cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .dialog-content {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.75rem;
+      padding: 20px;
     }
 
     .dialog-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
+      display: grid;
+      gap: 4px;
+      padding: 1rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background-color: var(--muted);
     }
 
     .dialog-actions:empty {
@@ -84,9 +86,10 @@ import {
     }
 
     [ngpDialogTitle] {
-      font-size: 1.125rem;
-      line-height: 1.75rem;
+      font-size: 1.5rem;
+      line-height: 1.2;
       font-weight: 600;
+      letter-spacing: -0.02em;
       color: var(--foreground);
       margin: 0;
     }

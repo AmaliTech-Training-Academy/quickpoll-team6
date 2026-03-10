@@ -13,27 +13,40 @@ import {
 import { Department } from '@/models';
 import { DepartmentService } from '@/services/department.service';
 import { ComboboxComponent } from '@/components/ui/primitives/combobox.component';
-import { SwitchComponent } from '@/components/ui/primitives/switch.component';
+import { RadioGroupComponent } from '@/components/ui/primitives/radio-group.component';
+import { RadioItemComponent } from '@/components/ui/primitives/radio-item.component';
 
 @Component({
   selector: 'app-poll-department-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ComboboxComponent, SwitchComponent, AsyncPipe, FormsModule],
+  imports: [ComboboxComponent, RadioGroupComponent, RadioItemComponent, AsyncPipe, FormsModule],
   template: `
     <div>
       <div class="flex flex-col gap-4">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex flex-col gap-1">
-            <h2 class="text-base font-medium text-foreground">Department</h2>
-            <p class="text-sm text-muted-foreground">
-              Enable department selection to assign this poll to a department.
-            </p>
-          </div>
-
-          <app-switch [(ngModel)]="enabled" />
+        <div class="flex flex-col gap-1">
+          <h2 class="text-base font-medium text-foreground">Audience</h2>
+          <p class="text-sm text-muted-foreground">
+            Choose whether this poll is visible to everyone or only to a specific department.
+          </p>
         </div>
 
-        @if (enabled()) {
+        <app-radio-group [(ngModel)]="audience" class="grid! sm:grid-cols-2! gap-3">
+          <app-radio-item value="everyone">
+            <span class="block text-sm font-medium text-inherit">Everyone</span>
+            <span class="mt-1 block text-xs text-muted-foreground">
+              Anyone can access and vote on this poll.
+            </span>
+          </app-radio-item>
+
+          <app-radio-item value="department">
+            <span class="block text-sm font-medium text-inherit">Department</span>
+            <span class="mt-1 block text-xs text-muted-foreground">
+              Limit this poll to people in one department.
+            </span>
+          </app-radio-item>
+        </app-radio-group>
+
+        @if (audience() === 'department') {
           <div class="flex flex-col gap-2">
             <app-combobox
               [options]="departmentNames()"
@@ -61,16 +74,16 @@ export class PollDepartmentSectionComponent {
 
   private readonly departmentService = inject(DepartmentService);
 
-  protected readonly enabled = signal(false);
+  protected readonly audience = signal<'everyone' | 'department'>('everyone');
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly departments = signal<Department[]>([]);
 
   protected readonly departmentNames = () =>
     this.departments().map((department) => department.name);
+
   protected readonly selectedDepartmentName = () => {
     const selected = this.departments().find((department) => department.id === this.departmentId());
-
     return selected?.name;
   };
 
@@ -87,7 +100,13 @@ export class PollDepartmentSectionComponent {
     });
 
     effect(() => {
-      if (!this.enabled()) {
+      if (this.departmentId() !== null) {
+        this.audience.set('department');
+      }
+    });
+
+    effect(() => {
+      if (this.audience() === 'everyone') {
         this.departmentId.set(null);
       }
     });
@@ -96,9 +115,5 @@ export class PollDepartmentSectionComponent {
   protected onDepartmentChange(value: string | undefined): void {
     const selected = this.departments().find((department) => department.name === value);
     this.departmentId.set(selected?.id ?? null);
-  }
-
-  protected clearDepartment(): void {
-    this.departmentId.set(null);
   }
 }

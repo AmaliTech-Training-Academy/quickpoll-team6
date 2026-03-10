@@ -3,14 +3,14 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroUser } from '@ng-icons/heroicons/outline';
+import { hugeUser } from '@ng-icons/huge-icons';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 
 @Component({
   selector: 'app-user-menu',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, RouterLink, AsyncPipe, NgIcon],
-  providers: [provideIcons({ heroUser })],
+  providers: [provideIcons({ hugeUser })],
   template: `
     <button
       app-button
@@ -25,7 +25,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
       <div
         class="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground"
       >
-        <ng-icon name="heroUser" class="text-base" />
+        <ng-icon name="hugeUser" />
       </div>
     </button>
   `,

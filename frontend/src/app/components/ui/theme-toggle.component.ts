@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroComputerDesktop, heroMoon, heroSun } from '@ng-icons/heroicons/outline';
-
+import { hugeComputer, hugeMoon02, hugeSun02 } from '@ng-icons/huge-icons';
 import { ThemePreference, ThemeService } from '@/services/theme.service';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 
@@ -9,9 +8,9 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
   selector: 'app-theme-toggle',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, NgIcon],
-  providers: [provideIcons({ heroSun, heroMoon, heroComputerDesktop })],
+  providers: [provideIcons({ hugeSun02, hugeMoon02, hugeComputer })],
   template: `
-    <div class="inline-flex items-center rounded-full border border-border bg-surface p-1">
+    <div class="inline-flex items-center rounded-full border border-border bg-surface p-px">
       <button
         app-button
         variant="ghost"
@@ -21,7 +20,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
         [attr.aria-pressed]="themePreference() === 'light'"
         (click)="setTheme('light')"
       >
-        <ng-icon name="heroSun" />
+        <ng-icon name="hugeSun02" />
       </button>
 
       <button
@@ -33,7 +32,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
         [attr.aria-pressed]="themePreference() === 'dark'"
         (click)="setTheme('dark')"
       >
-        <ng-icon name="heroMoon" />
+        <ng-icon name="hugeMoon02" />
       </button>
 
       <button
@@ -45,7 +44,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
         [attr.aria-pressed]="themePreference() === 'system'"
         (click)="setTheme('system')"
       >
-        <ng-icon name="heroComputerDesktop" />
+        <ng-icon name="hugeComputer" />
       </button>
     </div>
   `,

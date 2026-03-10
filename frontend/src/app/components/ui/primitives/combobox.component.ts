@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroChevronDown } from '@ng-icons/heroicons/outline';
+import { hugeArrowDown01 } from '@ng-icons/huge-icons';
 import {
   NgpCombobox,
   NgpComboboxButton,
@@ -33,7 +33,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     NgpComboboxButton,
     NgIcon,
   ],
-  providers: [provideIcons({ heroChevronDown }), provideValueAccessor(ComboboxComponent)],
+  providers: [provideIcons({ hugeArrowDown01 }), provideValueAccessor(ComboboxComponent)],
   template: `
     <div
       [(ngpComboboxValue)]="value"
@@ -51,7 +51,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       />
 
       <button ngpComboboxButton aria-label="Toggle dropdown">
-        <ng-icon name="heroChevronDown" />
+        <ng-icon name="hugeArrowDown01" />
       </button>
 
       <div *ngpComboboxPortal ngpComboboxDropdown>

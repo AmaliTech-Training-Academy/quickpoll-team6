@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroPlus } from '@ng-icons/heroicons/outline';
+import { hugeAdd01 } from '@ng-icons/huge-icons';
 import { User } from '@/models';
 import { PollService } from '@/services/poll.service';
 import { AuthService } from '@/services/auth.service';
@@ -29,11 +29,11 @@ import { PollCardSkeletonComponent } from '@/components/ui/poll-card-skeleton.co
     PollCardSkeletonComponent,
     SecondaryNavbarComponent,
   ],
-  providers: [provideIcons({ heroPlus })],
+  providers: [provideIcons({ hugeAdd01 })],
   template: `
     <app-content-header pageTitle="Polls">
       <button app-button routerLink="/~/polls/new" class="gap-2">
-        <ng-icon name="heroPlus" />
+        <ng-icon name="hugeAdd01" />
         Create Poll
       </button>
     </app-content-header>

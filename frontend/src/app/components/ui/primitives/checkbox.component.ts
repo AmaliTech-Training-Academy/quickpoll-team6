@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroCheckMini, heroMinusMini } from '@ng-icons/heroicons/mini';
+import { hugeCheckmarkSquare02, hugeMinusSign } from '@ng-icons/huge-icons';
 import { injectCheckboxState, NgpCheckbox } from 'ng-primitives/checkbox';
 import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
 
@@ -25,14 +25,14 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
   ],
   providers: [
     provideValueAccessor(CheckboxComponent),
-    provideIcons({ heroCheckMini, heroMinusMini }),
+    provideIcons({ hugeCheckmarkSquare02, hugeMinusSign }),
   ],
   imports: [NgIcon],
   template: `
     @if (state().indeterminate()) {
-      <ng-icon name="heroMinusMini" />
+      <ng-icon name="hugeMinusSign" />
     } @else if (state().checked()) {
-      <ng-icon name="heroCheckMini" />
+      <ng-icon name="hugeCheckmarkSquare02" />
     }
   `,
   styles: `

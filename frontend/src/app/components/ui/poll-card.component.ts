@@ -1,13 +1,14 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroChartBar, heroLockClosed } from '@ng-icons/heroicons/outline';
+import { hugeView, hugeSquareLock02 } from '@ng-icons/huge-icons';
 import { ButtonComponent } from './primitives/button.component';
 
 type PollOption = {
   id: string | number;
-  text: string;
+  text?: string;
+  option_text?: string;
   percentage: number;
 };
 
@@ -15,16 +16,23 @@ type Poll = {
   id: string | number;
   question: string;
   description?: string | null;
-  creatorName: string;
-  totalVotes: number;
+  creatorName?: string | null;
+  creator_name?: string | null;
+  totalVotes?: number | null;
+  total_votes?: number | null;
   options: PollOption[];
+  departmentId?: number | null;
+  department_id?: number | null;
+  departmentName?: string | null;
+  department_name?: string | null;
+  department?: { id?: number | null; name?: string | null } | string | null;
 };
 
 @Component({
   selector: 'app-poll-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DecimalPipe, ButtonComponent, NgIcon, RouterLink],
-  providers: [provideIcons({ heroChartBar, heroLockClosed })],
+  providers: [provideIcons({ hugeView, hugeSquareLock02 })],
   template: `
     <div class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6">
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -37,12 +45,28 @@ type Poll = {
               {{ poll().question }}
             </a>
           </h2>
+
           @if (poll().description) {
             <p class="mt-1 text-sm text-muted-foreground">{{ poll().description }}</p>
           }
-          <p class="mt-2 text-xs text-muted-foreground">
-            by {{ poll().creatorName }} &bull; {{ poll().totalVotes }} votes
-          </p>
+
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <p class="text-xs text-muted-foreground">
+              by {{ creatorLabel() }} &bull; {{ totalVotesLabel() }} votes
+            </p>
+
+            <span
+              class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none"
+              [class.border-border]="!isDepartmentAudience()"
+              [class.text-muted-foreground]="!isDepartmentAudience()"
+              [class.bg-muted/30]="!isDepartmentAudience()"
+              [class.border-primary/20]="isDepartmentAudience()"
+              [class.text-primary]="isDepartmentAudience()"
+              [class.bg-primary/5]="isDepartmentAudience()"
+            >
+              {{ audienceLabel() }}
+            </span>
+          </div>
         </div>
 
         <div class="flex items-center gap-2 md:shrink-0">
@@ -55,7 +79,7 @@ type Poll = {
             aria-label="View results"
             title="View results"
           >
-            <ng-icon name="heroChartBar" />
+            <ng-icon name="hugeView" />
           </button>
           <button
             app-button
@@ -66,7 +90,7 @@ type Poll = {
             aria-label="Close poll"
             title="Close poll"
           >
-            <ng-icon name="heroLockClosed" />
+            <ng-icon name="hugeSquareLock02" />
           </button>
         </div>
       </div>
@@ -75,7 +99,7 @@ type Poll = {
         @for (opt of poll().options; track opt.id) {
           <li class="rounded-lg border border-border/60 bg-muted/30 p-3">
             <div class="mb-2 flex items-center justify-between gap-3 text-xs">
-              <span class="text-foreground">{{ opt.text }}</span>
+              <span class="text-foreground">{{ optionLabel(opt) }}</span>
               <span class="text-muted-foreground">{{ opt.percentage | number: '1.0-1' }}%</span>
             </div>
             <div class="h-2 overflow-hidden rounded-full bg-muted">
@@ -91,5 +115,61 @@ type Poll = {
   `,
 })
 export class PollCardComponent {
-  poll = input.required<Poll>();
+  readonly poll = input.required<Poll>();
+
+  protected readonly departmentName = computed(() => {
+    const poll = this.poll();
+
+    if (typeof poll.department === 'object' && poll.department) {
+      return poll.department.name?.trim() || null;
+    }
+
+    if (typeof poll.department === 'string') {
+      return poll.department.trim() || null;
+    }
+
+    return poll.departmentName?.trim() || poll.department_name?.trim() || null;
+  });
+
+  protected readonly hasDepartmentId = computed(() => {
+    const poll = this.poll();
+
+    if (typeof poll.department === 'object' && poll.department?.id != null) {
+      return true;
+    }
+
+    return poll.departmentId != null || poll.department_id != null;
+  });
+
+  protected readonly isDepartmentAudience = computed(
+    () => this.departmentName() !== null || this.hasDepartmentId(),
+  );
+
+  protected readonly audienceLabel = computed(() => {
+    const departmentName = this.departmentName();
+
+    if (departmentName) {
+      return departmentName;
+    }
+
+    if (this.hasDepartmentId()) {
+      return 'Department';
+    }
+
+    return 'Company-wide';
+  });
+
+  protected readonly creatorLabel = computed(() => {
+    const poll = this.poll();
+    return poll.creatorName || poll.creator_name || 'Unknown';
+  });
+
+  protected readonly totalVotesLabel = computed(() => {
+    const poll = this.poll();
+    return poll.totalVotes ?? poll.total_votes ?? 0;
+  });
+
+  protected optionLabel(option: PollOption): string {
+    return option.text ?? option.option_text ?? '';
+  }
 }
