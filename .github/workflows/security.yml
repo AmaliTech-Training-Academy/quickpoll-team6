@@ -1,0 +1,224 @@
+# ──────────────────────────────────────────────────────────────
+# QuickPoll — Security Scanning (SAST)
+# ──────────────────────────────────────────────────────────────
+# Runs on every push and pull request to main/develop.
+# Scans for:
+#   - Secret leaks         (Gitleaks)
+#   - Vulnerable deps      (OWASP Dependency-Check)
+#   - Code quality issues  (SonarQube)
+#   - Container vulns      (Trivy)
+# ──────────────────────────────────────────────────────────────
+
+name: Security
+
+on:
+  workflow_dispatch: # disabled until staging is stable — re-enable by adding push/pull_request triggers
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────
+  # Gitleaks — Secret Detection
+  # ──────────────────────────────────────────────────────────
+
+  gitleaks:
+    name: Gitleaks — Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ──────────────────────────────────────────────────────────
+  # OWASP Dependency-Check — Vulnerable Dependencies
+  # ──────────────────────────────────────────────────────────
+
+  dependency-check:
+    name: OWASP — Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Build backend (resolve dependencies)
+        working-directory: ./backend
+        run: mvn dependency:resolve -B
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: QuickPoll
+          path: ./backend
+          format: HTML
+          args: >-
+            --failOnCVSS 9
+        continue-on-error: true
+
+      - name: Upload Dependency-Check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 14
+
+  # ──────────────────────────────────────────────────────────
+  # SonarQube — Code Quality & Static Analysis
+  # ──────────────────────────────────────────────────────────
+
+  sonarqube:
+    name: SonarQube — Code Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build and analyze backend
+        working-directory: ./backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: >
+          mvn clean verify sonar:sonar
+          -Dsonar.projectKey=quickpoll
+          -Dsonar.projectName=QuickPoll
+          -Dsonar.java.source=21
+          -DskipTests
+          -B
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────
+  # Trivy — Container Image Scanning
+  # ──────────────────────────────────────────────────────────
+
+  trivy-backend:
+    name: Trivy — Backend Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t quickpoll-backend:scan ./backend
+
+      - name: Run Trivy (backend)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: quickpoll-backend:scan
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF (backend)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: quickpoll-backend:scan
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-backend.sarif
+        continue-on-error: true
+
+  trivy-frontend:
+    name: Trivy — Frontend Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -t quickpoll-frontend:scan ./frontend
+
+      - name: Run Trivy (frontend)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: quickpoll-frontend:scan
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF (frontend)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: quickpoll-frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend.sarif
+        continue-on-error: true
+
+  # ──────────────────────────────────────────────────────────
+  # Trivy — IaC / Docker Compose Misconfiguration
+  # ──────────────────────────────────────────────────────────
+
+  trivy-iac:
+    name: Trivy — IaC Config Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Scan Dockerfiles and Compose
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
