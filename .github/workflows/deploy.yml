@@ -138,14 +138,64 @@ jobs:
             --force-new-deployment \
             --no-cli-pager
 
-      - name: Wait for backend to stabilize
+      - name: Wait for backend to stabilize (max 3m)
         run: |
-          aws ecs wait services-stable \
-            --cluster "quickpoll-${ENV}-cluster" \
-            --services "quickpoll-${ENV}-backend"
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+          MAX_SECONDS=180
+          INTERVAL=15
+          END=$((SECONDS+MAX_SECONDS))
 
-      - name: Wait for frontend to stabilize
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "backend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "backend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::backend did not stabilize within ${MAX_SECONDS}s"
+              aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:5].message" --output table || true
+              aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --output text || true
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Wait for frontend to stabilize (max 3m)
         run: |
-          aws ecs wait services-stable \
-            --cluster "quickpoll-${ENV}-cluster" \
-            --services "quickpoll-${ENV}-frontend"
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+          MAX_SECONDS=180
+          INTERVAL=15
+          END=$((SECONDS+MAX_SECONDS))
+
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "frontend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "frontend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::frontend did not stabilize within ${MAX_SECONDS}s"
+              aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:5].message" --output table || true
+              aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --output text || true
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
