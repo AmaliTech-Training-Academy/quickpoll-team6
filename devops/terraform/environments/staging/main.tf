@@ -142,10 +142,11 @@ module "ecs" {
 
       environment_vars = [
         { name = "SPRING_PROFILES_ACTIVE", value = "staging" },
-        { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
-        { name = "SPRING_DATASOURCE_PASSWORD", value = var.db_password },
+        { name = "DB_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
+        { name = "DB_USERNAME", value = var.db_username },
+        { name = "DB_PASSWORD", value = var.db_password },
         { name = "JWT_SECRET", value = var.jwt_secret },
+        { name = "KAFKA_BOOTSTRAP_SERVERS", value = "localhost:9092" },
       ]
     }
 
