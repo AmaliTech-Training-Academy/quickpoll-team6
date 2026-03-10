@@ -20,7 +20,7 @@ resource "aws_lb_target_group" "backend" {
   target_type = "ip"
 
   health_check {
-    path                = "/actuator/health"
+    path                = "/api/polls"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 5
