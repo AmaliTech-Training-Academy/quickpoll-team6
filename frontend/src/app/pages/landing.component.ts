@@ -1,4 +1,4 @@
-import { ButtonComponent } from '@/components/ui/button.component';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 

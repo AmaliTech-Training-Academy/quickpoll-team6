@@ -3,8 +3,8 @@ import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
 import { AuthService } from '@/services/auth.service';
-import { ButtonComponent } from '@/components/ui/button.component';
-import { InputComponent } from '@/components/ui/input.component';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
+import { InputComponent } from '@/components/ui/primitives/input.component';
 
 @Component({
   selector: 'app-login',
