@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,8 @@ public class PollController {
     private final PollService pollService;
 
     @GetMapping
-    @Operation(summary = "Get all polls", description = "Retrieve paginated list of all polls")
+    @Operation(summary = "Get all polls", description = "Retrieve paginated list of all polls (Admin only)")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<PollResponse>> getAllPolls(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -68,8 +70,8 @@ public class PollController {
     }
 
     @GetMapping("/{id}/results")
-    @Operation(summary = "Get poll results", description = "Retrieve poll results with vote counts and percentages")
-    public ResponseEntity<PollResponse> getPollResults(@PathVariable Long id) {
-        return ResponseEntity.ok(pollService.getPollResults(id));
+    @Operation(summary = "Get poll results", description = "Retrieve poll results with vote counts and percentages (Creator or Admin only)")
+    public ResponseEntity<PollResponse> getPollResults(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(pollService.getPollResults(id, user));
     }
 }

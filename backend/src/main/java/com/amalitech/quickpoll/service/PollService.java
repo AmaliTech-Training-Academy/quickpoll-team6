@@ -2,6 +2,8 @@ package com.amalitech.quickpoll.service;
 
 import com.amalitech.quickpoll.dto.*;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
+import com.amalitech.quickpoll.event.PollClosedDomainEvent;
+import com.amalitech.quickpoll.event.PollCreatedDomainEvent;
 import com.amalitech.quickpoll.mapper.PollMapper;
 import com.amalitech.quickpoll.mapper.PollOptionMapper;
 import com.amalitech.quickpoll.model.*;
@@ -9,6 +11,7 @@ import com.amalitech.quickpoll.model.enums.Role;
 import com.amalitech.quickpoll.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -27,11 +30,14 @@ public class PollService {
     private final PollOptionMapper pollOptionMapper;
     private final DepartmentRepository departmentRepository;
     private final PollInviteRepository pollInviteRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Page<PollResponse> getAllPolls(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return pollRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(this::toResponse);
+        Page<Poll> polls = pollRepository.findAllByOrderByCreatedAtDesc(pageable);
+        List<Long> pollIds = polls.getContent().stream().map(Poll::getId).toList();
+        List<Poll> pollsWithOptions = pollRepository.findAllByIdInWithOptions(pollIds);
+        return new PageImpl<>(pollsWithOptions.stream().map(this::toResponse).toList(), pageable, polls.getTotalElements());
     }
 
     public PollResponse getPollById(Long id) {
@@ -77,6 +83,8 @@ public class PollService {
         log.info("Created {} poll invites", invites.size());
         pollInviteRepository.saveAll(invites);
 
+        eventPublisher.publishEvent(new PollCreatedDomainEvent(savedPoll));
+
         return toResponse(savedPoll);
     }
 
@@ -97,6 +105,9 @@ public class PollService {
 
         poll.setActive(false);
         Poll closedPoll = pollRepository.save(poll);
+        
+        eventPublisher.publishEvent(new PollClosedDomainEvent(closedPoll));
+        
         return toResponse(closedPoll);
     }
 
@@ -114,9 +125,14 @@ public class PollService {
         return true;
     }
 
-    public PollResponse getPollResults(Long pollId) {
+    public PollResponse getPollResults(Long pollId, User user) {
         Poll poll = pollRepository.findByIdWithOptions(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
+        
+        if (!poll.getCreator().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the creator or admin can view poll results");
+        }
+        
         return toResponse(poll);
     }
 
