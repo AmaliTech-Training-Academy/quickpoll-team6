@@ -16,6 +16,8 @@ import { ComboboxComponent } from '@/components/ui/primitives/combobox.component
 import { RadioGroupComponent } from '@/components/ui/primitives/radio-group.component';
 import { RadioItemComponent } from '@/components/ui/primitives/radio-item.component';
 
+type PollAudience = 'company-wide' | 'department';
+
 @Component({
   selector: 'app-poll-department-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,7 +33,7 @@ import { RadioItemComponent } from '@/components/ui/primitives/radio-item.compon
         </div>
 
         <app-radio-group [(ngModel)]="audience" class="grid! sm:grid-cols-2! gap-3">
-          <app-radio-item value="everyone">
+          <app-radio-item value="company-wide">
             <span class="block text-sm font-medium text-inherit">Company-Wide</span>
             <span class="mt-1 block text-xs text-muted-foreground">
               Anyone in the company can access and vote on this poll.
@@ -70,11 +72,11 @@ import { RadioItemComponent } from '@/components/ui/primitives/radio-item.compon
 })
 export class PollDepartmentSectionComponent {
   readonly departmentId = model<number | null>(null);
+  readonly audience = model<PollAudience>('company-wide');
   readonly allowNoDepartment = input(true);
 
   private readonly departmentService = inject(DepartmentService);
 
-  protected readonly audience = signal<'everyone' | 'department'>('everyone');
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly departments = signal<Department[]>([]);
@@ -100,13 +102,13 @@ export class PollDepartmentSectionComponent {
     });
 
     effect(() => {
-      if (this.departmentId() !== null) {
+      if (this.departmentId() !== null && this.audience() !== 'department') {
         this.audience.set('department');
       }
     });
 
     effect(() => {
-      if (this.audience() === 'everyone') {
+      if (this.audience() === 'company-wide' && this.departmentId() !== null) {
         this.departmentId.set(null);
       }
     });

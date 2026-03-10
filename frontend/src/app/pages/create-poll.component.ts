@@ -28,6 +28,8 @@ import { ContentHeaderComponent } from '@/components/ui/content-header.component
 import { DialogComponent } from '@/components/ui/primitives/dialog.component';
 import { PollDepartmentSectionComponent } from '@/components/ui/poll-department-section.component';
 
+type PollAudience = 'company-wide' | 'department';
+
 @Component({
   selector: 'app-create-poll',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,7 +70,7 @@ import { PollDepartmentSectionComponent } from '@/components/ui/poll-department-
             name="hugeAlertCircle"
             color="var(--destructive)"
             size="18px"
-            class=" shrink-0 text-destructive"
+            class="shrink-0 text-destructive"
           />
           <p class="text-sm text-destructive">{{ error }}</p>
         </div>
@@ -251,10 +253,23 @@ import { PollDepartmentSectionComponent } from '@/components/ui/poll-department-
           </div>
 
           <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
-            <app-poll-department-section
-              [departmentId]="newPollForm.controls.departmentId.value"
-              (departmentIdChange)="newPollForm.controls.departmentId.setValue($event)"
-            />
+            <div class="flex flex-col gap-2">
+              <app-poll-department-section
+                [departmentId]="newPollForm.controls.departmentId.value"
+                (departmentIdChange)="onDepartmentIdChange($event)"
+                [audience]="newPollForm.controls.audience.value ?? 'company-wide'"
+                (audienceChange)="onAudienceChange($event)"
+              />
+
+              @if (
+                newPollForm.controls.audience.touched &&
+                newPollForm.controls.audience.errors?.['departmentRequired']
+              ) {
+                <div class="form-field-error" role="alert" aria-live="assertive">
+                  <span>Please select a department.</span>
+                </div>
+              }
+            </div>
           </div>
         </div>
 
@@ -327,12 +342,14 @@ export class CreatePollComponent {
     description: [''],
     selectionType: ['single' as 'single' | 'multiple', Validators.required],
     anonymous: [true, Validators.required],
+    audience: ['company-wide' as PollAudience, Validators.required],
     departmentId: [null as number | null],
     options: [
       ['', ''],
       [Validators.required, Validators.min(2)],
     ],
   });
+
   error = '';
 
   getOptions(): string[] {
@@ -344,6 +361,27 @@ export class CreatePollComponent {
     const options = [...this.getOptions()];
     options[index] = input.value;
     this.newPollForm.controls.options.setValue(options);
+  }
+
+  onAudienceChange(audience: PollAudience) {
+    this.newPollForm.controls.audience.setValue(audience);
+
+    if (audience === 'company-wide') {
+      this.newPollForm.controls.departmentId.setValue(null);
+      this.newPollForm.controls.audience.setErrors(null);
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  onDepartmentIdChange(departmentId: number | null) {
+    this.newPollForm.controls.departmentId.setValue(departmentId);
+
+    if (departmentId !== null) {
+      this.newPollForm.controls.audience.setErrors(null);
+    }
+
+    this.cdr.markForCheck();
   }
 
   addOption() {
@@ -377,6 +415,7 @@ export class CreatePollComponent {
       description: '',
       selectionType: 'single',
       anonymous: true,
+      audience: 'company-wide',
       departmentId: null,
       options: ['', ''],
     });
@@ -395,7 +434,7 @@ export class CreatePollComponent {
   }
 
   submitPoll() {
-    const { question, description, selectionType, anonymous, departmentId, options } =
+    const { question, description, selectionType, anonymous, audience, departmentId, options } =
       this.newPollForm.getRawValue();
 
     const trimmedQuestion = (question ?? '').trim();
@@ -424,6 +463,12 @@ export class CreatePollComponent {
       hasErrors = true;
     }
 
+    if (audience === 'department' && departmentId == null) {
+      this.newPollForm.controls.audience.markAsTouched();
+      this.newPollForm.controls.audience.setErrors({ departmentRequired: true });
+      hasErrors = true;
+    }
+
     if (hasErrors) {
       this.cdr.markForCheck();
       return;
@@ -433,6 +478,7 @@ export class CreatePollComponent {
     this.newPollForm.controls.options.setValue(validOptions);
     this.newPollForm.controls.question.updateValueAndValidity();
     this.newPollForm.controls.options.updateValueAndValidity();
+    this.newPollForm.controls.audience.updateValueAndValidity();
 
     this.pollService
       .create({
@@ -441,11 +487,11 @@ export class CreatePollComponent {
         options: validOptions,
         multipleChoice: selectionType === 'multiple',
         anonymous,
-        departmentId,
+        departmentId: audience === 'department' ? departmentId : null,
       })
       .subscribe({
         next: (res: any) => this.router.navigate(['/~/polls', res.id]),
-        error: (err: unknown) => {
+        error: () => {
           this.error = 'Failed to create poll. Please try again.';
           this.cdr.markForCheck();
         },
