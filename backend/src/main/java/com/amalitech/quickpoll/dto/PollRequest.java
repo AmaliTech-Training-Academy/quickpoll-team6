@@ -19,7 +19,7 @@ public class PollRequest {
     private String description;
     @NotEmpty(message = "At least one option is required")
     private List<String> options;
-    private boolean multipleChoice;
+    @NotNull(message = "Maximum selections must be specified")
     private Integer maxSelections;
     @NotNull(message = "Anonymity must be specified")
     private Boolean anonymous;

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,7 +52,7 @@ public class PollController {
     public ResponseEntity<PollResponse> createPoll(
             @Valid @RequestBody PollRequest request,
             @AuthenticationPrincipal User creator) {
-        return ResponseEntity.ok(pollService.createPoll(request, creator));
+        return ResponseEntity.status(HttpStatus.CREATED).body(pollService.createPoll(request, creator));
     }
 
     @PutMapping("/{id}/close")

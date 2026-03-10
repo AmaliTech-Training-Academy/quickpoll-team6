@@ -13,7 +13,7 @@ public interface PollMapper {
     @Mapping(target = "question", source = "poll.question")
     @Mapping(target = "creatorName", source = "creator.fullName")
     @Mapping(target = "status", expression = "java(poll.isActive() ? \"ACTIVE\" : \"CLOSED\")")
-    @Mapping(target = "multipleChoice", source = "multiSelect")
+    @Mapping(target = "maxSelections", source = "maxSelections")
     @Mapping(target = "options", ignore = true)
     @Mapping(target = "totalVotes", ignore = true)
     PollResponse toResponse(Poll poll);
@@ -22,7 +22,6 @@ public interface PollMapper {
     @Mapping(target = "title", source = "request.title")
     @Mapping(target = "question", source = "request.question")
     @Mapping(target = "description", source = "request.description")
-    @Mapping(target = "multiSelect", source = "request.multipleChoice")
     @Mapping(target = "maxSelections", source = "request.maxSelections")
     @Mapping(target = "creator", source = "creator")
     @Mapping(target = "options", ignore = true)

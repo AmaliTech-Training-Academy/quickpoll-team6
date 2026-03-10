@@ -48,8 +48,8 @@ public class PollService {
 
     @Transactional
     public PollResponse createPoll(PollRequest request, User creator) {
-        if (request.isMultipleChoice() && request.getMaxSelections() == null) {
-            throw new IllegalArgumentException("Maximum selections must be specified for multiple choice polls");
+        if (request.getMaxSelections() < 1) {
+            throw new IllegalArgumentException("Maximum selections must be at least 1");
         }
         
         Poll poll = pollMapper.toEntity(request, creator);
@@ -171,7 +171,7 @@ public class PollService {
         response.setQuestion(poll.getQuestion());
         response.setDescription(poll.getDescription());
         response.setCreatorName(poll.getCreator().getFullName());
-        response.setMultipleChoice(poll.isMultiSelect());
+        response.setMaxSelections(poll.getMaxSelections());
         response.setExpiresAt(poll.getExpiresAt());
         response.setStatus(poll.isActive() ? "ACTIVE" : "CLOSED");
         response.setCreatedAt(poll.getCreatedAt());

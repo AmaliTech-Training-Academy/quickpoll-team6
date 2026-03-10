@@ -11,7 +11,7 @@ public class PollBasicResponse {
     private String question;
     private String description;
     private String creatorName;
-    private boolean multipleChoice;
+    private Integer maxSelections;
     private LocalDateTime expiresAt;
     private String status;
     private LocalDateTime createdAt;
