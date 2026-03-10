@@ -36,8 +36,6 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     }
   `,
   styles: `
-    /* These styles rely on CSS variables that can be imported from ng-primitives/example-theme/index.css in your global styles */
-
     :host {
       display: flex;
       width: 1.25rem;
@@ -46,28 +44,39 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       align-items: center;
       justify-content: center;
       border-radius: 0.25rem;
-      border: 1px solid var(--ngp-border);
-      background-color: transparent;
+      border: 1px solid var(--border);
+      background-color: var(--surface);
       padding: 0;
       outline: none;
       flex: none;
-      color: var(--ngp-text-inverse);
+      color: var(--primary-foreground);
       font-size: 0.75rem;
+      transition:
+        background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+        border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+        color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      box-sizing: border-box;
     }
 
     :host[data-hover] {
-      background-color: var(--ngp-background-hover);
+      background-color: var(--secondary-hover);
     }
 
     :host[data-checked],
     :host[data-indeterminate] {
-      border-color: var(--ngp-background-inverse);
-      background-color: var(--ngp-background-inverse);
+      border-color: var(--primary);
+      background-color: var(--primary);
+      color: var(--primary-foreground);
     }
 
     :host[data-focus-visible] {
-      outline: 2px solid var(--ngp-focus-ring);
+      outline: 2px solid var(--ring);
       outline-offset: 2px;
+    }
+
+    :host[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   `,
   host: {

@@ -11,20 +11,35 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { ButtonComponent } from '../ui/button.component';
-import { UserMenuComponent } from '../ui/user-menu.component';
+import { DepartmentIndicatorComponent } from '@/components/ui/department-indicator.component';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
+import { ThemeToggleComponent } from '@/components/ui/theme-toggle.component';
+import { UserMenuComponent } from '@/components/ui/user-menu.component';
 
 @Component({
   selector: 'app-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, UserMenuComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    DepartmentIndicatorComponent,
+    ButtonComponent,
+    ThemeToggleComponent,
+    UserMenuComponent,
+  ],
   template: `
-    <div class="flex flex-col min-h-screen">
-      <div class="border-b">
+    <div class="flex flex-col min-h-screen mb-12">
+      <div
+        class="border-b sticky top-0 bg-background/95 supports-backdrop-filter:bg-background/80 backdrop-blur"
+      >
         <header class="p-3 pb-0 gap-3 w-full flex flex-col maxview-container">
-          <div class="flex items-center justify-between p-1">
-            Quickpoll
-            <app-user-menu />
+          <div class="flex items-center justify-between gap-3 p-1">
+            <app-department-indicator />
+            <div class="flex items-center gap-2">
+              <app-theme-toggle />
+              <app-user-menu />
+            </div>
           </div>
           <nav #navElement class="relative flex gap-1 items-center pb-2">
             @for (link of navLinks; track link.path) {
@@ -50,9 +65,9 @@ import { UserMenuComponent } from '../ui/user-menu.component';
           </nav>
         </header>
       </div>
-      <main class="flex-1">
+      <div class="flex-1">
         <router-outlet />
-      </main>
+      </div>
     </div>
   `,
   styles: `
@@ -66,7 +81,7 @@ import { UserMenuComponent } from '../ui/user-menu.component';
       left: 0;
       bottom: 0;
       height: 2px;
-      background: #000;
+      background: var(--foreground);
       border-radius: 9999px 9999px 0 0;
       pointer-events: none;
       transition:
@@ -76,7 +91,7 @@ import { UserMenuComponent } from '../ui/user-menu.component';
     }
   `,
 })
-export class DashboardLayoutComponent {
+export class LayoutComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly navElement = viewChild.required<ElementRef<HTMLElement>>('navElement');

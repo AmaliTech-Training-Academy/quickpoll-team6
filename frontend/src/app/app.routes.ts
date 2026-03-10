@@ -1,15 +1,19 @@
 import { Routes } from '@angular/router';
 import { PollListComponent } from './pages/poll-list.component';
+import { PollDetailsComponent } from './pages/poll-details.component';
+import { PollMetricsComponent } from './pages/poll-metrics.component';
 import { LoginComponent } from './pages/login.component';
 import { RegisterComponent } from './pages/register.component';
-// import { CreatePollComponent } from './pages/create-poll.component';
+import { CreatePollComponent } from './pages/create-poll.component';
 import { NotFoundComponent } from './pages/not-found.component';
 import { LandingComponent } from './pages/landing.component';
 import { ProfileComponent } from './pages/profile.component';
 import { authGuard } from './guards/auth.guard';
 import { AuthLayoutComponent } from './components/layout/auth-layout.component';
-import { DashboardLayoutComponent } from './components/layout/dashboard-layout.component';
+
 import { AccountLayoutComponent } from './components/layout/account-layout.component';
+import { LayoutComponent } from './components/layout/layout.component';
+import { PollDetailsLayoutComponent } from './components/layout/poll-details-layout.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', component: LandingComponent },
@@ -20,7 +24,7 @@ export const routes: Routes = [
   {
     path: '~',
     canActivate: [authGuard],
-    component: DashboardLayoutComponent,
+    component: LayoutComponent,
     children: [
       {
         path: '',
@@ -31,8 +35,16 @@ export const routes: Routes = [
         path: 'polls',
         children: [
           { path: '', component: PollListComponent },
-          // { path: ':id', component: PollListComponent },
-          // { path: 'new', component: CreatePollComponent },
+          { path: 'new', component: CreatePollComponent },
+          {
+            path: ':id',
+            component: PollDetailsLayoutComponent,
+            children: [
+              { path: '', redirectTo: 'metrics', pathMatch: 'full' },
+              { path: 'details', component: PollDetailsComponent },
+              { path: 'metrics', component: PollMetricsComponent },
+            ],
+          },
         ],
       },
       {

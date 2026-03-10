@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { SidebarButtonComponent } from './sidebar-button.component';
+import { NavbarButtonComponent } from './navbar-button.component';
 
 export interface SidebarLink {
   label: string;
@@ -9,11 +9,11 @@ export interface SidebarLink {
 @Component({
   selector: 'app-sidebar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SidebarButtonComponent],
+  imports: [NavbarButtonComponent],
   template: `
     <nav class="min-w-56 flex flex-col gap-px">
       @for (link of navLinks(); track link.path) {
-        <app-sidebar-button [label]="link.label" [path]="link.path" />
+        <app-navbar-button [label]="link.label" [path]="link.path" />
       }
     </nav>
   `,

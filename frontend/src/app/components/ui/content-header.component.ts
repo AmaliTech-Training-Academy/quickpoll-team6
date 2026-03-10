@@ -5,14 +5,14 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   template: `
-    <div class="border-b">
-      <div class="p-5 py-7.5 maxview-container">
-        <h1 class="text-2xl font-medium">{{ title() }}</h1>
+    <div class="border-b min-h-25">
+      <div class="flex items-center justify-between p-5 py-7.5 maxview-container">
+        <h1 class="text-2xl md:text-3xl font-semibold">{{ pageTitle() }}</h1>
         <ng-content />
       </div>
     </div>
   `,
 })
 export class ContentHeaderComponent {
-  title = input.required<string>();
+  pageTitle = input.required<string>();
 }
