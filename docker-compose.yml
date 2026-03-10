@@ -1,21 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: quickpoll-db
-    environment:
-      POSTGRES_DB: quickpoll
-      POSTGRES_USER: quickpoll
-      POSTGRES_PASSWORD: quickpoll123
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U quickpoll"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: qp-zookeeper
@@ -53,31 +36,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/quickpoll
-      SPRING_DATASOURCE_USERNAME: quickpoll
-      SPRING_DATASOURCE_PASSWORD: quickpoll123
-      JWT_SECRET: Z29vZC1zZWNyZXQta2V5LWZvcg
-    depends_on:
-      postgres:
-        condition: service_healthy
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:-Z29vZC1zZWNyZXQta2V5LWZvcg}
 
   data-pipeline:
     build: ./data-engineering
     container_name: qp-data-pipeline
+    env_file:
+      - ./data-engineering/.env.data-pipeline
     depends_on:
-      postgres:
-        condition: service_healthy
       kafka:
         condition: service_healthy
-    environment:
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_NAME: quickpoll
-      DB_USER: quickpoll
-      DB_PASSWORD: quickpoll123
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      KAFKA_TOPIC_VOTE_EVENTS: vote_events
-      KAFKA_TOPIC_POLL_EVENTS: poll_events
 
   frontend:
     build: ./frontend
@@ -86,6 +57,3 @@ services:
       - "4200:80"
     depends_on:
       - backend
-
-volumes:
-  pgdata:
