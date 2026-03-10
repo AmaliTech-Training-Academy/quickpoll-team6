@@ -20,12 +20,12 @@ resource "aws_lb_target_group" "backend" {
   target_type = "ip"
 
   health_check {
-    path                = "/actuator/health"
+    path                = "/api/auth/login"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     timeout             = 5
     interval            = 30
-    matcher             = "200"
+    matcher             = "200,405"
   }
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-backend-tg" })
