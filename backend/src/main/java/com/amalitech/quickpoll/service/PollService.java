@@ -1,11 +1,14 @@
 package com.amalitech.quickpoll.service;
 
 import com.amalitech.quickpoll.dto.*;
+import com.amalitech.quickpoll.event.*;
 import com.amalitech.quickpoll.model.*;
 import com.amalitech.quickpoll.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import com.amalitech.quickpoll.mapper.*;
 
@@ -16,6 +19,7 @@ public class PollService {
     private final PollOptionRepository optionRepository;
     private final VoteRepository voteRepository;
     private final PollMapper pollMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Page<PollResponse> getAllPolls(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -29,6 +33,7 @@ public class PollService {
         return toResponse(poll);
     }
 
+    @Transactional
     public PollResponse createPoll(PollRequest request, User creator) {
         Poll poll = pollMapper.toEntity(request, creator);
         poll = pollRepository.save(poll);
@@ -37,16 +42,60 @@ public class PollService {
             PollOption option = pollMapper.toOptionEntity(optionText, poll);
             optionRepository.save(option);
         }
-        return toResponse(pollRepository.findById(poll.getId()).get());
+        
+        Poll savedPoll = pollRepository.findById(poll.getId()).get();
+        eventPublisher.publishEvent(new PollCreatedDomainEvent(savedPoll));
+        
+        return toResponse(savedPoll);
     }
 
-    // TODO: Implement vote method
-    // public void vote(Long pollId, VoteRequest request, User voter) { ... }
+    @Transactional
+    public void vote(Long pollId, VoteRequest request, User voter) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new RuntimeException("Poll not found"));
+        
+        if (!poll.isActive()) {
+            throw new RuntimeException("Poll is closed");
+        }
+        
+        if (!poll.isMultiSelect() && voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)) {
+            throw new RuntimeException("Already voted on this poll");
+        }
+        
+        for (Long optionId : request.getOptionIds()) {
+            PollOption option = optionRepository.findById(optionId)
+                    .orElseThrow(() -> new RuntimeException("Option not found"));
+            
+            if (!option.getPoll().getId().equals(pollId)) {
+                throw new RuntimeException("Option does not belong to this poll");
+            }
+            
+            Vote vote = new Vote();
+            vote.setPoll(poll);
+            vote.setOption(option);
+            vote.setUser(voter);
+            vote = voteRepository.save(vote);
+            
+            eventPublisher.publishEvent(new VoteCastDomainEvent(vote));
+        }
+    }
 
-    // TODO: Implement closePoll method
-    // public PollResponse closePoll(Long pollId, User creator) { ... }
-
-    // TODO: Implement deletePoll method
+    @Transactional
+    public PollResponse closePoll(Long pollId, User creator) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new RuntimeException("Poll not found"));
+        
+        if (!poll.getCreator().getId().equals(creator.getId())) {
+            throw new RuntimeException("Only poll creator can close the poll");
+        }
+        
+        poll.setActive(false);
+        poll = pollRepository.save(poll);
+        
+        eventPublisher.publishEvent(new PollClosedDomainEvent(poll));
+        
+        return toResponse(poll);
+    }
 
     private PollResponse toResponse(Poll poll) {
         List<PollOption> options = optionRepository.findByPollId(poll.getId());

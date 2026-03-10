@@ -18,6 +18,15 @@ spring:
     init:
       mode: always
       continue-on-error: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
 
 server:
   port: 8080
@@ -25,6 +34,12 @@ server:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
+
+app:
+  kafka:
+    topics:
+      vote-events: ${KAFKA_TOPIC_VOTE_EVENTS:vote_events}
+      poll-events: ${KAFKA_TOPIC_POLL_EVENTS:poll_events}
 
 springdoc:
   api-docs:
