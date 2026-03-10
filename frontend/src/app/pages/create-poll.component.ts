@@ -166,22 +166,8 @@ type PollAudience = 'company-wide' | 'department';
                   >
                     <div
                       *cdkDragPlaceholder
-                      class="flex items-center gap-3 rounded-lg border border-border bg-surface/70 p-3 opacity-70"
-                    >
-                      <div
-                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
-                      >
-                        <ng-icon name="hugeDragDropVertical" />
-                      </div>
-
-                      <div class="h-10 flex-1 rounded-md border border-border/60 bg-input/70"></div>
-
-                      <div
-                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground"
-                      >
-                        <ng-icon name="hugeCancel01" />
-                      </div>
-                    </div>
+                      class="flex items-center h-12.5 gap-3 rounded-lg border border-border/50 bg-input/30 p-3 opacity-[0.7]"
+                    ></div>
 
                     <button
                       type="button"
