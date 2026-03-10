@@ -11,6 +11,7 @@ public class PollMapper {
 
     public Poll toEntity(PollRequest request, User creator) {
         Poll poll = new Poll();
+        poll.setTitle(request.getTitle());
         poll.setQuestion(request.getQuestion());
         poll.setDescription(request.getDescription());
         poll.setCreator(creator);

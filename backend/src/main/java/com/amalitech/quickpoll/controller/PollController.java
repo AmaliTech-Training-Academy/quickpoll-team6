@@ -35,8 +35,19 @@ public class PollController {
         return ResponseEntity.ok(pollService.createPoll(request, creator));
     }
 
-    // TODO: Add vote endpoint - POST /api/polls/{id}/vote
-    // TODO: Add close poll endpoint - PUT /api/polls/{id}/close
-    // TODO: Add delete poll endpoint - DELETE /api/polls/{id}
-    // TODO: Add get results endpoint - GET /api/polls/{id}/results
+    @PostMapping("/{id}/vote")
+    public ResponseEntity<Void> vote(
+            @PathVariable Long id,
+            @Valid @RequestBody VoteRequest request,
+            @AuthenticationPrincipal User voter) {
+        pollService.vote(id, request, voter);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/close")
+    public ResponseEntity<PollResponse> closePoll(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User creator) {
+        return ResponseEntity.ok(pollService.closePoll(id, creator));
+    }
 }

@@ -8,6 +8,8 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PollRequest {
     @NotBlank
+    private String title;
+    @NotBlank
     private String question;
     private String description;
     @NotEmpty

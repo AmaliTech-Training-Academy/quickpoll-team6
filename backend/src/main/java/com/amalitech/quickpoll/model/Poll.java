@@ -18,6 +18,9 @@ public class Poll {
     private Long id;
 
     @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false)
     private String question;
     
     @Column(length = 1000, nullable = true)
@@ -38,9 +41,6 @@ public class Poll {
 
     @Column(name = "multi_select")
     private boolean multiSelect;
-
-    @Column(nullable = false, name = "anonymous")
-    private boolean anonymous;
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
