@@ -38,3 +38,19 @@ data-engineering/.venv/
 # ── Docker ────────────────────────────────────────────────────
 *.log
 Makefile 
+.gitignore
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+COPILOT-INSTRUCTIONS.md
+.ai-reference-docs
+.github
+.agents
+.venv
+.python-version
+.env
+.env.local
+.env.*.local
+project-description.md
+quickpoll_user_stories.md
+pipeline-architecture-diagram.excalidraw
