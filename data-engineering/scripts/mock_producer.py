@@ -6,6 +6,7 @@ to the topics the pipeline listens on.
 Usage (from data-engineering/ with .env or env vars set):
     uv run python scripts/mock_producer.py            # 5 vote events (default)
     uv run python scripts/mock_producer.py --votes 20
+    uv run python scripts/mock_producer.py --votes 1000 --quiet   # stress testing
 """
 
 from __future__ import annotations
@@ -45,7 +46,11 @@ def _make_producer() -> KafkaProducer:
     )
 
 
-def publish_vote_events(producer: KafkaProducer, count: int) -> None:
+def publish_vote_events(
+    producer: KafkaProducer, count: int, *, quiet: bool = False
+) -> None:
+    """Publish count VOTE_CAST events. When quiet and count > 50, log every 100."""
+    log_every = 100 if (quiet and count > 50) else 1
     for i in range(1, count + 1):
         poll_id = random.choice(_POLL_IDS)
         event = {
@@ -57,7 +62,8 @@ def publish_vote_events(producer: KafkaProducer, count: int) -> None:
             "voted_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
         producer.send(KAFKA_TOPIC_VOTE_EVENTS, value=event)
-        logger.info("Published VOTE_CAST #%d: poll_id=%d", i, poll_id)
+        if i % log_every == 0 or i == count:
+            logger.info("Published VOTE_CAST #%d/%d: poll_id=%d", i, count, poll_id)
     producer.flush()
 
 
@@ -83,13 +89,21 @@ if __name__ == "__main__":
     configure_logging()
     parser = argparse.ArgumentParser(description="Publish mock Kafka events")
     parser.add_argument(
-        "--votes", type=int, default=5, help="Number of VOTE_CAST events"
+        "--votes",
+        type=int,
+        default=5,
+        help="Number of VOTE_CAST events (e.g. 5000 for stress testing)",
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-event logging when count > 50; log progress every 100",
     )
     args = parser.parse_args()
 
     logger.info("Connecting to Kafka at %s...", KAFKA_BOOTSTRAP_SERVERS)
     prod = _make_producer()
     publish_poll_event(prod)
-    publish_vote_events(prod, args.votes)
+    publish_vote_events(prod, args.votes, quiet=args.quiet)
     prod.close()
     logger.info("Done. Published 1 POLL_CREATED + %d VOTE_CAST events.", args.votes)

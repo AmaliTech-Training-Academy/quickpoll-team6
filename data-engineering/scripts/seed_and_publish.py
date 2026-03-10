@@ -8,6 +8,7 @@ Usage (from data-engineering/ with .env configured):
     uv run python scripts/seed_and_publish.py --polls 10 --votes-per-poll 20
     uv run python scripts/seed_and_publish.py --stream-delay 2   # trickle mode
     uv run python scripts/seed_and_publish.py --no-kafka          # OLTP only
+    uv run python scripts/seed_and_publish.py --zero-vote-polls 2 --expired-polls 1
 """
 
 from __future__ import annotations
@@ -149,11 +150,22 @@ def generate_users(count: int, start_id: int) -> list[dict]:
     return users
 
 
-def generate_polls(count: int, start_id: int, user_ids: list[int]) -> list[dict]:
-    """Generate random poll dicts with 3-5 options each."""
+def generate_polls(
+    count: int,
+    start_id: int,
+    user_ids: list[int],
+    *,
+    zero_vote_count: int = 0,
+    expired_count: int = 0,
+) -> list[dict]:
+    """Generate random poll dicts with 3-5 options each.
+
+    Creates count regular polls, then zero_vote_count polls with no votes,
+    then expired_count polls with expires_at in the past and active=False.
+    """
     polls = []
-    for i in range(count):
-        pid = start_id + i
+    pid = start_id
+    for _ in range(count):
         template, base_options = random.choice(_POLL_TEMPLATES)
         topic = random.choice(_TOPICS)
         question = template.format(topic=topic)
@@ -175,8 +187,69 @@ def generate_polls(count: int, start_id: int, user_ids: list[int]) -> list[dict]
                 "expires_at": (datetime.now(UTC) + timedelta(days=30))
                 .isoformat()
                 .replace("+00:00", "Z"),
+                "zero_votes": False,
+                "expired": False,
             }
         )
+        pid += 1
+
+    for _ in range(zero_vote_count):
+        template, base_options = random.choice(_POLL_TEMPLATES)
+        topic = random.choice(_TOPICS)
+        question = template.format(topic=topic)
+        title = f"Poll about {topic} (zero votes)"
+        num_options = random.randint(3, min(5, len(base_options)))
+        options = random.sample(base_options, num_options)
+        created_at = _iso_utc_now()
+        polls.append(
+            {
+                "id": pid,
+                "title": title,
+                "question": question,
+                "description": f"A poll about {topic}",
+                "creator_id": random.choice(user_ids),
+                "multi_select": False,
+                "active": True,
+                "options": [{"text": opt} for opt in options],
+                "created_at": created_at,
+                "expires_at": (datetime.now(UTC) + timedelta(days=30))
+                .isoformat()
+                .replace("+00:00", "Z"),
+                "zero_votes": True,
+                "expired": False,
+            }
+        )
+        pid += 1
+
+    for _ in range(expired_count):
+        template, base_options = random.choice(_POLL_TEMPLATES)
+        topic = random.choice(_TOPICS)
+        question = template.format(topic=topic)
+        title = f"Poll about {topic} (expired)"
+        num_options = random.randint(3, min(5, len(base_options)))
+        options = random.sample(base_options, num_options)
+        created_at = _iso_utc_now()
+        expires_at = (
+            (datetime.now(UTC) - timedelta(days=7)).isoformat().replace("+00:00", "Z")
+        )
+        polls.append(
+            {
+                "id": pid,
+                "title": title,
+                "question": question,
+                "description": f"A poll about {topic}",
+                "creator_id": random.choice(user_ids),
+                "multi_select": False,
+                "active": False,
+                "options": [{"text": opt} for opt in options],
+                "created_at": created_at,
+                "expires_at": expires_at,
+                "zero_votes": False,
+                "expired": True,
+            }
+        )
+        pid += 1
+
     return polls
 
 
@@ -191,6 +264,7 @@ def generate_votes(
 
     Returns (all_options, all_votes). Option IDs are assigned sequentially
     from *start_option_id*; vote IDs from *start_vote_id*.
+    Skips polls with zero_votes=True (no votes generated).
     """
     all_options: list[dict] = []
     all_votes: list[dict] = []
@@ -205,6 +279,9 @@ def generate_votes(
             )
             option_ids_for_poll.append(opt_id)
             opt_id += 1
+
+        if poll.get("zero_votes"):
+            continue
 
         # Each user votes at most once per poll
         voters = random.sample(user_ids, min(votes_per_poll, len(user_ids)))
@@ -382,6 +459,18 @@ def _parse_args() -> argparse.Namespace:
         "--polls", type=int, default=5, help="Number of polls to create"
     )
     parser.add_argument(
+        "--zero-vote-polls",
+        type=int,
+        default=0,
+        help="Number of polls with no votes (edge case)",
+    )
+    parser.add_argument(
+        "--expired-polls",
+        type=int,
+        default=0,
+        help="Number of polls with expires_at in past and active=False",
+    )
+    parser.add_argument(
         "--votes-per-poll", type=int, default=10, help="Max votes per poll"
     )
     parser.add_argument("--users", type=int, default=8, help="Number of new users")
@@ -407,6 +496,10 @@ def _validate_args(args: argparse.Namespace) -> None:
         raise SystemExit("error: --users must be >= 1")
     if args.polls < 0:
         raise SystemExit("error: --polls must be >= 0")
+    if args.zero_vote_polls < 0:
+        raise SystemExit("error: --zero-vote-polls must be >= 0")
+    if args.expired_polls < 0:
+        raise SystemExit("error: --expired-polls must be >= 0")
     if args.votes_per_poll < 0:
         raise SystemExit("error: --votes-per-poll must be >= 0")
     if args.stream_delay < 0:
@@ -433,7 +526,13 @@ def main() -> None:
     # Generate data
     users = generate_users(args.users, user_start)
     user_ids = [u["id"] for u in users]
-    polls = generate_polls(args.polls, poll_start, user_ids)
+    polls = generate_polls(
+        args.polls,
+        poll_start,
+        user_ids,
+        zero_vote_count=args.zero_vote_polls,
+        expired_count=args.expired_polls,
+    )
     options, votes = generate_votes(
         polls, args.votes_per_poll, vote_start, option_start, user_ids
     )

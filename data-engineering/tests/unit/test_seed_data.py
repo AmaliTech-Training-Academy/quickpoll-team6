@@ -16,12 +16,16 @@ import seed_data as sd  # noqa: E402
 
 def test_seed_users_cover_poll_creators_and_voters() -> None:
     user_ids = {u[0] for u in sd.USERS}
-    required_ids = {p[4] for p in sd.POLLS} | {v[3] for v in sd.VOTES}
+    required_ids = (
+        {p[4] for p in sd.POLLS}
+        | {p[4] for p in sd.POLLS_EDGE}
+        | {v[3] for v in sd.VOTES}
+    )
     assert required_ids.issubset(user_ids)
 
 
 def test_seed_options_and_votes_reference_existing_parents() -> None:
-    poll_ids = {p[0] for p in sd.POLLS}
+    poll_ids = {p[0] for p in sd.POLLS} | {p[0] for p in sd.POLLS_EDGE}
     option_ids = {o[0] for o in sd.OPTIONS}
     user_emails = {u[1] for u in sd.USERS}
     department_ids = {d[0] for d in sd.DEPARTMENTS}
@@ -51,6 +55,28 @@ def test_validate_seed_references_raises_on_missing_creator(monkeypatch) -> None
     monkeypatch.setattr(sd, "POLLS", broken_polls)
     with pytest.raises(ValueError, match="creator_id"):
         sd._validate_seed_references()
+
+
+def test_polls_edge_has_zero_vote_expired_and_high_participation() -> None:
+    """QP-15: POLLS_EDGE includes zero-vote, expired, and high-participation polls."""
+    poll_ids = {p[0] for p in sd.POLLS_EDGE}
+    vote_poll_ids = {v[1] for v in sd.VOTES}
+    # Poll 8: zero votes (edge case)
+    assert 8 in poll_ids
+    assert 8 not in vote_poll_ids
+    # Poll 9: expired poll (has votes)
+    assert 9 in poll_ids
+    assert 9 in vote_poll_ids
+    # Poll 10: high participation (all 7 users voted)
+    assert 10 in poll_ids
+    assert 10 in vote_poll_ids
+    poll_10_votes = [v for v in sd.VOTES if v[1] == 10]
+    assert len(poll_10_votes) == 7
+
+
+def test_validate_seed_references_passes_with_polls_edge() -> None:
+    """Validation should pass with POLLS_EDGE included."""
+    sd._validate_seed_references()
 
 
 def test_reset_sequences_executes_for_all_tables() -> None:

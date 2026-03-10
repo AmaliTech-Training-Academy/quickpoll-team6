@@ -14,6 +14,7 @@ Thumbs.db
 # ── IDE / Editor ──────────────────────────────────────────────
 .idea/
 .vscode/
+*.http
 *.iml
 *.swp
 *~
@@ -54,3 +55,4 @@ COPILOT-INSTRUCTIONS.md
 project-description.md
 quickpoll_user_stories.md
 pipeline-architecture-diagram.excalidraw
+docker-compose.local.yml
