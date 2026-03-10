@@ -32,9 +32,9 @@ import { RadioItemComponent } from '@/components/ui/primitives/radio-item.compon
 
         <app-radio-group [(ngModel)]="audience" class="grid! sm:grid-cols-2! gap-3">
           <app-radio-item value="everyone">
-            <span class="block text-sm font-medium text-inherit">Everyone</span>
+            <span class="block text-sm font-medium text-inherit">Company-Wide</span>
             <span class="mt-1 block text-xs text-muted-foreground">
-              Anyone can access and vote on this poll.
+              Anyone in the company can access and vote on this poll.
             </span>
           </app-radio-item>
 
