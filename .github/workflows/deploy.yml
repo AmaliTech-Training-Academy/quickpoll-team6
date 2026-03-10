@@ -1,68 +1,70 @@
-# ──────────────────────────────────────────────────────────────
-# QuickPoll — Deploy to ECR + ECS Fargate
-# ──────────────────────────────────────────────────────────────
-# develop → staging
-# main    → production
-#
-# Required GitHub Secrets (set on the repo — Settings > Secrets):
-#   AWS_ACCESS_KEY_ID        IAM key with ECR push + ECS deploy permissions
-#   AWS_SECRET_ACCESS_KEY    IAM secret
-#   AWS_ACCOUNT_ID           12-digit AWS account number
-# ──────────────────────────────────────────────────────────────
-
-name: Deploy
+name: Deploy (Staging)
 
 on:
   push:
-    branches: [main, develop]
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+    branches: [develop]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "**.md"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   AWS_REGION: eu-west-1
+  ENV: staging
+  TF_DIR: devops/terraform/environments/staging
 
 jobs:
-
-  # ──────────────────────────────────────────────────────────
-  # Resolve environment name from branch
-  # ──────────────────────────────────────────────────────────
-
-  setup:
-    name: Resolve Environment
+  terraform:
+    name: Terraform Init/Plan/Apply
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-    outputs:
-      environment: ${{ steps.resolve.outputs.environment }}
-      ecr_registry: ${{ steps.resolve.outputs.ecr_registry }}
-      cluster: ${{ steps.resolve.outputs.cluster }}
+    env:
+      TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
+      TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
 
     steps:
-      - name: Resolve target environment
-        id: resolve
-        run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            ENV="production"
-          else
-            ENV="staging"
-          fi
-          echo "environment=$ENV" >> "$GITHUB_OUTPUT"
-          echo "ecr_registry=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" >> "$GITHUB_OUTPUT"
-          echo "cluster=quickpoll-${ENV}-cluster" >> "$GITHUB_OUTPUT"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # ──────────────────────────────────────────────────────────
-  # Build & Push Docker Images to ECR
-  # ──────────────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve tfplan
 
   build-and-push:
-    name: Build & Push — ${{ matrix.service }}
+    name: Build and Push Images
     runs-on: ubuntu-latest
-    needs: setup
-    environment: ${{ needs.setup.outputs.environment }}
+    needs: terraform
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -87,39 +89,27 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push image
         env:
-          REGISTRY: ${{ needs.setup.outputs.ecr_registry }}
+          REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
           SERVICE: quickpoll/${{ matrix.service }}
           SHA: ${{ github.sha }}
         run: |
           docker build \
             -t "$REGISTRY/$SERVICE:$SHA" \
-            -t "$REGISTRY/$SERVICE:latest" \
+            -t "$REGISTRY/$SERVICE:${ENV}" \
             ${{ matrix.context }}
 
           docker push "$REGISTRY/$SERVICE:$SHA"
-          docker push "$REGISTRY/$SERVICE:latest"
-
-          echo "Pushed: $REGISTRY/$SERVICE:$SHA"
-          echo "Pushed: $REGISTRY/$SERVICE:latest"
-
-  # ──────────────────────────────────────────────────────────
-  # Rolling Deploy — force new ECS task revision
-  # ──────────────────────────────────────────────────────────
+          docker push "$REGISTRY/$SERVICE:${ENV}"
 
   deploy:
-    name: Deploy → ${{ needs.setup.outputs.environment }}
+    name: Deploy to ECS (Staging)
     runs-on: ubuntu-latest
-    needs: [setup, build-and-push]
-    environment: ${{ needs.setup.outputs.environment }}
-
-    env:
-      CLUSTER: ${{ needs.setup.outputs.cluster }}
-      ENV: ${{ needs.setup.outputs.environment }}
+    needs: build-and-push
+    timeout-minutes: 20
 
     steps:
       - name: Configure AWS credentials
@@ -129,46 +119,30 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Force new deployment — backend
+      - name: Force new deployment - backend
         run: |
           aws ecs update-service \
-            --cluster "$CLUSTER" \
-            --service "quickpoll-$ENV-backend" \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-backend" \
             --force-new-deployment \
             --no-cli-pager
 
-      - name: Force new deployment — frontend
+      - name: Force new deployment - frontend
         run: |
           aws ecs update-service \
-            --cluster "$CLUSTER" \
-            --service "quickpoll-$ENV-frontend" \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-frontend" \
             --force-new-deployment \
             --no-cli-pager
 
       - name: Wait for backend to stabilize
         run: |
-          echo "Waiting for backend service to stabilize (up to 10 min)..."
           aws ecs wait services-stable \
-            --cluster "$CLUSTER" \
-            --services "quickpoll-$ENV-backend"
+            --cluster "quickpoll-${ENV}-cluster" \
+            --services "quickpoll-${ENV}-backend"
 
       - name: Wait for frontend to stabilize
         run: |
-          echo "Waiting for frontend service to stabilize (up to 10 min)..."
           aws ecs wait services-stable \
-            --cluster "$CLUSTER" \
-            --services "quickpoll-$ENV-frontend"
-
-      - name: Print live application URL
-        run: |
-          ALB_DNS=$(aws elbv2 describe-load-balancers \
-            --names "quickpoll-$ENV-alb" \
-            --query 'LoadBalancers[0].DNSName' \
-            --output text)
-
-          echo "======================================================"
-          echo " QuickPoll deployed to: $ENV"
-          echo " URL: http://$ALB_DNS"
-          echo " Commit: ${{ github.sha }}"
-          echo " Branch: ${{ github.ref_name }}"
-          echo "======================================================"
+            --cluster "quickpoll-${ENV}-cluster" \
+            --services "quickpoll-${ENV}-frontend"
