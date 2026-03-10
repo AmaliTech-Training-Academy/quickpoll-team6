@@ -13,8 +13,14 @@ import { NgOptimizedImage } from '@angular/common';
           <router-outlet />
         </div>
       </main>
-      <div class="relative w-1/2 max-md:hidden">
-        <img ngSrc="/images/auth-layout-bg.jpg" fill style="object-fit:cover" alt="" priority />
+      <div class="relative w-1/2 max-lg:hidden">
+        <img
+          ngSrc="/images/auth-layout-bg.jpg"
+          fill
+          style="object-fit:cover"
+          alt="Photo by hato on Unsplash"
+          priority
+        />
       </div>
     </div>
   `,
