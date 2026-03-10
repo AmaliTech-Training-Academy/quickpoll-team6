@@ -40,9 +40,7 @@ if ENVIRONMENT == "staging":
     KAFKA_BOOTSTRAP_SERVERS: str = config("KAFKA_BOOTSTRAP_SERVERS")
     KAFKA_SASL_USERNAME: str = config("KAFKA_SASL_USERNAME")
     KAFKA_SASL_PASSWORD: str = config("KAFKA_SASL_PASSWORD")
-    KAFKA_SASL_MECHANISM: str = config(
-        "KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256"
-    )
+    KAFKA_SASL_MECHANISM: str = config("KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256")
     KAFKA_SSL_CAFILE: str = config("KAFKA_SSL_CAFILE", default="")
 else:
     KAFKA_BOOTSTRAP_SERVERS = config(
@@ -76,6 +74,7 @@ def get_kafka_security_config() -> dict[str, Any]:
         out["ssl_cafile"] = KAFKA_SSL_CAFILE
     return out
 
+
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 LOG_LEVEL: str = config("LOG_LEVEL", default="INFO")
 BACKFILL_INTERVAL_MINUTES: int = config(
@@ -88,7 +87,11 @@ FORCE_FULL_BACKFILL: bool = (
     config("FORCE_FULL_BACKFILL", default="false", cast=str).lower() == "true"
 )
 
-# ── Cloudflare R2(Dead-Letter Queue) ─────────────────────────────────────────
+# ── Dead-Letter Queue ────────────────────────────────────────────────────────
+# local-dev: DLQ_DIR (folder). staging: R2 (bucket).
+DLQ_DIR: str = config("DLQ_DIR", default="data/dlq")
+
+# Cloudflare R2 (staging only)
 R2_ENDPOINT_URL: str = config("R2_ENDPOINT_URL", default="")
 R2_ACCESS_KEY_ID: str = config("R2_ACCESS_KEY_ID", default="")
 R2_SECRET_ACCESS_KEY: str = config("R2_SECRET_ACCESS_KEY", default="")
