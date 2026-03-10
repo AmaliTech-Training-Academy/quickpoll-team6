@@ -1,99 +1,32 @@
-# ──────────────────────────────────────────────────────────────
-# QuickPoll — Terraform Infrastructure
-# ──────────────────────────────────────────────────────────────
-# pull_request  → terraform plan  (shows what WOULD change — no apply)
-# push develop  → terraform apply staging
-# push main     → terraform apply production
-# workflow_dispatch → manual apply for either environment
-#
-# Required GitHub Secrets:
-#   AWS_ACCESS_KEY_ID        IAM key with full Terraform permissions
-#   AWS_SECRET_ACCESS_KEY    IAM secret
-#   TF_VAR_DB_USERNAME       RDS username
-#   TF_VAR_DB_PASSWORD       RDS password
-#   TF_VAR_JWT_SECRET        JWT signing secret (min 32 chars)
-# ──────────────────────────────────────────────────────────────
-
-name: Terraform
+name: Deploy (Staging)
 
 on:
   push:
-    branches: [main, develop]
-    paths:
-      - "devops/terraform/**"
-
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - "devops/terraform/**"
-
+    branches: [develop]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "**.md"
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment"
-        required: true
-        default: staging
-        type: choice
-        options: [staging, production]
-
-concurrency:
-  group: terraform-${{ github.ref }}
-  cancel-in-progress: false
 
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   AWS_REGION: eu-west-1
-  TF_INPUT: false
+  ENV: staging
+  TF_DIR: devops/terraform/environments/staging
 
 jobs:
-
-  # ──────────────────────────────────────────────────────────
-  # Resolve which environment directory to use
-  # ──────────────────────────────────────────────────────────
-
-  setup:
-    name: Resolve Environment
+  terraform:
+    name: Terraform Init/Plan/Apply
     runs-on: ubuntu-latest
-
-    outputs:
-      environment: ${{ steps.resolve.outputs.environment }}
-      tf_dir: ${{ steps.resolve.outputs.tf_dir }}
-
-    steps:
-      - name: Resolve environment
-        id: resolve
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ENV="${{ github.event.inputs.environment }}"
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
-            ENV="production"
-          else
-            ENV="staging"
-          fi
-          echo "environment=$ENV" >> "$GITHUB_OUTPUT"
-          echo "tf_dir=devops/terraform/environments/$ENV" >> "$GITHUB_OUTPUT"
-
-  # ──────────────────────────────────────────────────────────
-  # Terraform Plan (runs on every push and PR)
-  # ──────────────────────────────────────────────────────────
-
-  plan:
-    name: Terraform Plan — ${{ needs.setup.outputs.environment }}
-    runs-on: ubuntu-latest
-    needs: setup
-    environment: ${{ needs.setup.outputs.environment }}
+    timeout-minutes: 30
 
     env:
       TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
       TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
       TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
-
-    defaults:
-      run:
-        working-directory: ${{ needs.setup.outputs.tf_dir }}
 
     steps:
       - name: Checkout code
@@ -112,65 +45,37 @@ jobs:
           terraform_version: "~1.7"
 
       - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
         run: terraform init
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-
       - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
         run: terraform validate
 
       - name: Terraform Plan
-        id: plan
-        run: terraform plan -out=tfplan -no-color 2>&1 | tee plan_output.txt
-        continue-on-error: true
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -out=tfplan
 
-      - name: Post plan summary to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('${{ needs.setup.outputs.tf_dir }}/plan_output.txt', 'utf8');
-            const truncated = plan.length > 60000 ? plan.slice(0, 60000) + '\n...(truncated)' : plan;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### Terraform Plan — \`${{ needs.setup.outputs.environment }}\`\n\`\`\`hcl\n${truncated}\n\`\`\``
-            });
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve tfplan
 
-      - name: Fail if plan errored
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
-      - name: Upload plan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ needs.setup.outputs.environment }}
-          path: ${{ needs.setup.outputs.tf_dir }}/tfplan
-          retention-days: 1
-
-  # ──────────────────────────────────────────────────────────
-  # Terraform Apply (only on push to a branch — not on PRs)
-  # ──────────────────────────────────────────────────────────
-
-  apply:
-    name: Terraform Apply — ${{ needs.setup.outputs.environment }}
+  build-and-push:
+    name: Build and Push Images
     runs-on: ubuntu-latest
-    needs: [setup, plan]
-    if: github.event_name != 'pull_request'
-    environment: ${{ needs.setup.outputs.environment }}
+    needs: terraform
+    timeout-minutes: 30
 
-    env:
-      TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
-      TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
-
-    defaults:
-      run:
-        working-directory: ${{ needs.setup.outputs.tf_dir }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: ./backend
+            service: backend
+          - context: ./frontend
+            service: frontend
+          - context: ./data-engineering
+            service: data-engineering
 
     steps:
       - name: Checkout code
@@ -183,22 +88,61 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          SERVICE: quickpoll/${{ matrix.service }}
+          SHA: ${{ github.sha }}
+        run: |
+          docker build \
+            -t "$REGISTRY/$SERVICE:$SHA" \
+            -t "$REGISTRY/$SERVICE:${ENV}" \
+            ${{ matrix.context }}
+
+          docker push "$REGISTRY/$SERVICE:$SHA"
+          docker push "$REGISTRY/$SERVICE:${ENV}"
+
+  deploy:
+    name: Deploy to ECS (Staging)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    timeout-minutes: 20
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          terraform_version: "~1.7"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Download plan artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ needs.setup.outputs.environment }}
-          path: ${{ needs.setup.outputs.tf_dir }}
+      - name: Force new deployment - backend
+        run: |
+          aws ecs update-service \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-backend" \
+            --force-new-deployment \
+            --no-cli-pager
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Force new deployment - frontend
+        run: |
+          aws ecs update-service \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-frontend" \
+            --force-new-deployment \
+            --no-cli-pager
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+      - name: Wait for backend to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --services "quickpoll-${ENV}-backend"
 
-      - name: Print outputs
-        run: terraform output
+      - name: Wait for frontend to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --services "quickpoll-${ENV}-frontend"
