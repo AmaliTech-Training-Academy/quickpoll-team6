@@ -1,0 +1,27 @@
+.venv
+.env
+ca-certificate.crt
+docker-compose.kafka-dev.yml
+skills/
+copilot-instructions.md
+skills-lock.json
+ai-reference-docs/
+.ruff_cache/
+.pytest_cache/
+
+# Data directories (keep structure via .gitkeep)
+data/raw/*
+data/processed/*
+data/dlq/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/dlq/.gitkeep
+
+# Config with secrets (keep .example files)
+config/*.yaml
+!config/*.yaml.example
+
+__pycache__/
+*.pyc
+
+.agents/
