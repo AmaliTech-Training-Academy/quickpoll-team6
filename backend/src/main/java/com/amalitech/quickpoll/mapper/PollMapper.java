@@ -1,52 +1,33 @@
 package com.amalitech.quickpoll.mapper;
 
-import com.amalitech.quickpoll.dto.*;
-import com.amalitech.quickpoll.model.*;
-import org.springframework.stereotype.Component;
+import com.amalitech.quickpoll.dto.PollRequest;
+import com.amalitech.quickpoll.dto.PollResponse;
+import com.amalitech.quickpoll.model.Poll;
+import com.amalitech.quickpoll.model.User;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-import java.util.List;
+@Mapper(componentModel = "spring", uses = {PollOptionMapper.class})
+public interface PollMapper {
+    
+    @Mapping(target = "question", source = "poll.question")
+    @Mapping(target = "creatorName", source = "creator.fullName")
+    @Mapping(target = "status", expression = "java(poll.isActive() ? \"ACTIVE\" : \"CLOSED\")")
+    @Mapping(target = "multipleChoice", source = "multiSelect")
+    @Mapping(target = "options", ignore = true)
+    @Mapping(target = "totalVotes", ignore = true)
+    PollResponse toResponse(Poll poll);
 
-@Component
-public class PollMapper {
-
-    public Poll toEntity(PollRequest request, User creator) {
-        Poll poll = new Poll();
-        poll.setTitle(request.getTitle());
-        poll.setQuestion(request.getQuestion());
-        poll.setDescription(request.getDescription());
-        poll.setCreator(creator);
-        poll.setMultiSelect(request.isMultipleChoice());
-        poll.setActive(true);
-        return poll;
-    }
-
-    public PollResponse toResponse(Poll poll, List<OptionResponse> options, int totalVotes) {
-        PollResponse response = new PollResponse();
-        response.setId(poll.getId());
-        response.setQuestion(poll.getQuestion());
-        response.setDescription(poll.getDescription());
-        response.setCreatorName(poll.getCreator().getFullName());
-        response.setStatus(poll.isActive() ? "ACTIVE" : "CLOSED");
-        response.setMultipleChoice(poll.isMultiSelect());
-        response.setCreatedAt(poll.getCreatedAt());
-        response.setTotalVotes(totalVotes);
-        response.setOptions(options);
-        return response;
-    }
-
-    public PollOption toOptionEntity(String optionText, Poll poll) {
-        PollOption option = new PollOption();
-        option.setOptionText(optionText);
-        option.setPoll(poll);
-        return option;
-    }
-
-    public OptionResponse toOptionResponse(PollOption option, int voteCount, double percentage) {
-        OptionResponse response = new OptionResponse();
-        response.setId(option.getId());
-        response.setText(option.getOptionText());
-        response.setVoteCount(voteCount);
-        response.setPercentage(percentage);
-        return response;
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "question", source = "request.question")
+    @Mapping(target = "description", source = "request.description")
+    @Mapping(target = "multiSelect", source = "request.multipleChoice")
+    @Mapping(target = "creator", source = "creator")
+    @Mapping(target = "options", ignore = true)
+    @Mapping(target = "invites", ignore = true)
+    @Mapping(target = "active", constant = "true")
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "expiresAt", source = "request.expiresAt")
+    @Mapping(target = "title", ignore = true)
+    Poll toEntity(PollRequest request, User creator);
 }

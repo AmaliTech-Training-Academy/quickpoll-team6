@@ -6,6 +6,8 @@ import com.amalitech.quickpoll.errorhandlers.*;
 import com.amalitech.quickpoll.mapper.AuthMapper;
 import com.amalitech.quickpoll.model.User;
 import com.amalitech.quickpoll.model.enums.Role;
+import com.amalitech.quickpoll.repository.DepartmentMemberRepository;
+import com.amalitech.quickpoll.repository.DepartmentRepository;
 import com.amalitech.quickpoll.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,12 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
 
     @Mock
+    private DepartmentRepository departmentRepository;
+
+    @Mock
+    private DepartmentMemberRepository departmentMemberRepository;
+
+    @Mock
     private AuthMapper authMapper;
 
     @InjectMocks
@@ -65,7 +73,7 @@ class AuthServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(user);
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("token");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("refreshToken");
-        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(response);
+        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString(), any())).thenReturn(response);
 
         AuthServiceResponse result = authService.register(request);
 
@@ -102,9 +110,10 @@ class AuthServiceTest {
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(user);
+        when(departmentMemberRepository.findByEmailWithDepartment(anyString())).thenReturn(Optional.empty());
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("token");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("refreshToken");
-        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(response);
+        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString(), any())).thenReturn(response);
 
         AuthServiceResponse result = authService.login(request);
 
@@ -137,9 +146,10 @@ class AuthServiceTest {
         when(jwtService.isTokenValid(anyString())).thenReturn(true);
         when(jwtService.extractEmail(anyString())).thenReturn("test@example.com");
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
+        when(departmentMemberRepository.findByEmailWithDepartment(anyString())).thenReturn(Optional.empty());
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("newToken");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("newRefreshToken");
-        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(response);
+        when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString(), any())).thenReturn(response);
 
         AuthServiceResponse result = authService.refreshToken(refreshToken);
 

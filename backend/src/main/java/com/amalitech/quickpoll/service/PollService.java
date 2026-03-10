@@ -1,25 +1,32 @@
 package com.amalitech.quickpoll.service;
 
 import com.amalitech.quickpoll.dto.*;
-import com.amalitech.quickpoll.event.*;
+import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
+import com.amalitech.quickpoll.mapper.PollMapper;
+import com.amalitech.quickpoll.mapper.PollOptionMapper;
 import com.amalitech.quickpoll.model.*;
+import com.amalitech.quickpoll.model.enums.Role;
 import com.amalitech.quickpoll.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
-import com.amalitech.quickpoll.mapper.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PollService {
     private final PollRepository pollRepository;
     private final PollOptionRepository optionRepository;
     private final VoteRepository voteRepository;
     private final PollMapper pollMapper;
-    private final ApplicationEventPublisher eventPublisher;
+    private final PollOptionMapper pollOptionMapper;
+    private final DepartmentRepository departmentRepository;
+    private final PollInviteRepository pollInviteRepository;
 
     public Page<PollResponse> getAllPolls(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -28,87 +35,110 @@ public class PollService {
     }
 
     public PollResponse getPollById(Long id) {
-        Poll poll = pollRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Poll not found"));
+        Poll poll = pollRepository.findByIdWithOptions(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
         return toResponse(poll);
     }
 
     @Transactional
     public PollResponse createPoll(PollRequest request, User creator) {
         Poll poll = pollMapper.toEntity(request, creator);
-        poll = pollRepository.save(poll);
+        log.info("Creating poll: {}", poll);
+        Poll savedPoll = pollRepository.save(poll);
 
-        for (String optionText : request.getOptions()) {
-            PollOption option = pollMapper.toOptionEntity(optionText, poll);
-            optionRepository.save(option);
-        }
-        
-        Poll savedPoll = pollRepository.findById(poll.getId()).get();
-        eventPublisher.publishEvent(new PollCreatedDomainEvent(savedPoll));
-        
+        List<PollOption> options = request.getOptions().stream()
+                .map(optionText -> {
+                    PollOption option = new PollOption();
+                    option.setOptionText(optionText);
+                    option.setPoll(savedPoll);
+                    return option;
+                })
+                .toList();
+        optionRepository.saveAll(options);
+
+        List<Department> departments = departmentRepository.findAllByIdInWithMembers(request.getDepartmentIds());
+        log.info("Found {} departments for IDs: {}", departments.size(), request.getDepartmentIds());
+
+        List<PollInvite> invites = departments.stream()
+                .flatMap(department -> {
+                    log.info("Department '{}' has {} members", department.getName(), department.getMembers().size());
+                    return department.getMembers().stream();
+                })
+                .map(member -> PollInvite.builder()
+                        .poll(savedPoll)
+                        .departmentMember(member)
+                        .build())
+                .toList();
+        log.info("Created {} poll invites", invites.size());
+        pollInviteRepository.saveAll(invites);
+
         return toResponse(savedPoll);
     }
 
-    @Transactional
-    public void vote(Long pollId, VoteRequest request, User voter) {
+    // TODO: Implement vote method
+    // public void vote(Long pollId, VoteRequest request, User voter) { ... }
+
+    public  PollResponse closePoll(Long pollId, User user) {
         Poll poll = pollRepository.findById(pollId)
-                .orElseThrow(() -> new RuntimeException("Poll not found"));
-        
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
+
+        if (!poll.getCreator().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the creator or admin can close this poll");
+        }
+
         if (!poll.isActive()) {
-            throw new RuntimeException("Poll is closed");
+            throw new IllegalStateException("Poll is already closed");
         }
-        
-        if (!poll.isMultiSelect() && voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)) {
-            throw new RuntimeException("Already voted on this poll");
-        }
-        
-        for (Long optionId : request.getOptionIds()) {
-            PollOption option = optionRepository.findById(optionId)
-                    .orElseThrow(() -> new RuntimeException("Option not found"));
-            
-            if (!option.getPoll().getId().equals(pollId)) {
-                throw new RuntimeException("Option does not belong to this poll");
-            }
-            
-            Vote vote = new Vote();
-            vote.setPoll(poll);
-            vote.setOption(option);
-            vote.setUser(voter);
-            vote = voteRepository.save(vote);
-            
-            eventPublisher.publishEvent(new VoteCastDomainEvent(vote));
-        }
+
+        poll.setActive(false);
+        Poll closedPoll = pollRepository.save(poll);
+        return toResponse(closedPoll);
     }
 
-    @Transactional
-    public PollResponse closePoll(Long pollId, User creator) {
+
+
+    public Boolean deletePoll(Long pollId, User user) {
         Poll poll = pollRepository.findById(pollId)
-                .orElseThrow(() -> new RuntimeException("Poll not found"));
-        
-        if (!poll.getCreator().getId().equals(creator.getId())) {
-            throw new RuntimeException("Only poll creator can close the poll");
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
+
+        if (!poll.getCreator().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
+            throw new AccessDeniedException("Only the creator or admin can delete this poll");
         }
-        
-        poll.setActive(false);
-        poll = pollRepository.save(poll);
-        
-        eventPublisher.publishEvent(new PollClosedDomainEvent(poll));
-        
+
+        pollRepository.delete(poll);
+        return true;
+    }
+
+    public PollResponse getPollResults(Long pollId) {
+        Poll poll = pollRepository.findByIdWithOptions(pollId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
         return toResponse(poll);
     }
 
     private PollResponse toResponse(Poll poll) {
-        List<PollOption> options = optionRepository.findByPollId(poll.getId());
-        int totalVotes = options.stream()
-                .mapToInt(o -> voteRepository.countByOptionId(o.getId()))
-                .sum();
+        List<PollOption> options = poll.getOptions();
+        List<Long> optionIds = options.stream().map(PollOption::getId).toList();
+
+        java.util.Map<Long, Integer> voteCounts = voteRepository.countVotesByOptionIds(optionIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        result -> (Long) result[0],
+                        result -> ((Number) result[1]).intValue()
+                ));
+
+        int totalVotes = voteCounts.values().stream().mapToInt(Integer::intValue).sum();
 
         List<OptionResponse> optionResponses = options.stream().map(o -> {
-            int count = voteRepository.countByOptionId(o.getId());
-            double percentage = totalVotes > 0 ? (count * 100.0 / totalVotes) : 0;
-            return pollMapper.toOptionResponse(o, count, percentage);
+            int count = voteCounts.getOrDefault(o.getId(), 0);
+            OptionResponse response = pollOptionMapper.toResponse(o);
+            response.setVoteCount(count);
+            response.setPercentage(totalVotes > 0 ? (count * 100.0 / totalVotes) : 0);
+            return response;
         }).toList();
 
-        return pollMapper.toResponse(poll, optionResponses, totalVotes);
+        PollResponse response = pollMapper.toResponse(poll);
+        response.setTotalVotes(totalVotes);
+        response.setOptions(optionResponses);
+        return response;
     }
 }
