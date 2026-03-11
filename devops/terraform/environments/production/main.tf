@@ -143,9 +143,9 @@ module "ecs" {
 
       environment_vars = [
         { name = "SPRING_PROFILES_ACTIVE", value = "production" },
-        { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
-        { name = "SPRING_DATASOURCE_PASSWORD", value = var.db_password },
+        { name = "DB_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
+        { name = "DB_USERNAME", value = var.db_username },
+        { name = "DB_PASSWORD", value = var.db_password },
         { name = "JWT_SECRET", value = var.jwt_secret },
       ]
     }
@@ -154,7 +154,7 @@ module "ecs" {
       image          = "${module.ecr.repository_urls["frontend"]}:${local.environment}"
       cpu            = 512
       memory         = 1024
-      container_port = 80
+      container_port = 8080
       desired_count  = 2
 
       enable_autoscaling = true

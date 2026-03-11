@@ -1,5 +1,5 @@
-# ──────────────────────────────────────────────────────────────
-* @nabbi007
+# Global fallback
+* @nabbi007 @Samuel1796
 
 # DevOps & Infrastructure
 /.github/ @nabbi007
@@ -22,5 +22,5 @@ Makefile @nabbi007
 /qa/ @Samuel1796
 
 # Documentation
-*.md @Samuel1796
-/docs/ @Samuel1796
+*.md @nabbi007
+/docs/ @nabbi007

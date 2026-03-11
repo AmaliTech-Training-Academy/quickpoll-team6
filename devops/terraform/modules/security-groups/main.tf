@@ -1,7 +1,7 @@
 # ── ALB Security Group (web-alb-sg) ──────────────────────────────────────────
 resource "aws_security_group" "alb" {
   name        = "${var.project}-${var.environment}-web-alb-sg"
-  description = "ALB — allow HTTP/HTTPS from internet"
+  description = "ALB - allow HTTP/HTTPS from internet"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -33,21 +33,13 @@ resource "aws_security_group" "alb" {
 # ── App Security Group (app-sg) ───────────────────────────────────────────────
 resource "aws_security_group" "app" {
   name        = "${var.project}-${var.environment}-app-sg"
-  description = "ECS tasks — allow traffic from ALB only"
+  description = "ECS tasks - allow traffic from ALB only"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Backend port from ALB"
+    description     = "App port from ALB"
     from_port       = 8080
     to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ingress {
-    description     = "Frontend port from ALB"
-    from_port       = 80
-    to_port         = 80
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
@@ -65,7 +57,7 @@ resource "aws_security_group" "app" {
 # ── DB Security Group (db-sg) ─────────────────────────────────────────────────
 resource "aws_security_group" "db" {
   name        = "${var.project}-${var.environment}-db-sg"
-  description = "RDS — allow PostgreSQL from app layer only"
+  description = "RDS - allow PostgreSQL from app layer only"
   vpc_id      = var.vpc_id
 
   ingress {
