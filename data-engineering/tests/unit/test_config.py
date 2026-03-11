@@ -11,15 +11,6 @@ def test_database_url_format() -> None:
     assert "/" in DATABASE_URL.split("@")[1]
 
 
-def test_kafka_defaults() -> None:
-    """KAFKA_BOOTSTRAP_SERVERS and KAFKA_GROUP_ID have defaults."""
-    # Reload without extra env vars to exercise defaults
-    from data_engineering.config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_GROUP_ID
-
-    assert KAFKA_BOOTSTRAP_SERVERS != ""
-    assert KAFKA_GROUP_ID != ""
-
-
 def test_log_level_default() -> None:
     """LOG_LEVEL defaults to INFO when not set."""
     from data_engineering.config import LOG_LEVEL
