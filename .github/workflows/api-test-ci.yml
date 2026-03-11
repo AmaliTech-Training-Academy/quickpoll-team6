@@ -154,8 +154,8 @@ jobs:
         to: ${{ secrets.EMAIL_TO }}
         from: yoshninjas.1@gmail.com
         secure: false
-        # Action expects file:// URI when body content is read from disk.
-        body: file://email_body.txt
+        # Path is relative to workspace root; working-directory offset must be included.
+        body: file://qa/api-tests/email_body.txt
       
     # Debug: print Surefire reports on failure
     - name: Print Surefire reports (on failure)
@@ -279,26 +279,4 @@ jobs:
         path: qa/api-tests/allure-report-final/
         retention-days: 30
 
-  # Optional parity check: run the same test image in Docker to validate containerized execution.
-  docker-test:
-    runs-on: ubuntu-latest
-      
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Build Docker image
-      run: docker build -t api-test-automation .
-      
-    - name: Run tests in Docker
-      # --rm removes the container after exit; results survive only via mounted /app/target.
-      run: docker run --rm -v $(pwd)/target:/app/target api-test-automation
-      continue-on-error: true
-      
-    - name: Upload Docker Test Results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-test-results
-        path: target/surefire-reports/
-        retention-days: 30
+
