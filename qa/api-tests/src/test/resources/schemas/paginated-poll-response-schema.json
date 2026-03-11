@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Paginated Poll Response Schema",
+  "description": "JSON schema for validating paginated poll list responses (Spring Data Page format)",
+  "type": "object",
+  "required": ["content", "pageable", "totalPages", "totalElements", "first", "last", "size", "number", "numberOfElements", "empty"],
+  "properties": {
+    "content": {
+      "type": "array",
+      "description": "Array of poll objects",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "question", "creatorName", "status", "maxSelections", "expiresAt", "createdAt", "totalVotes", "options"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Poll identifier"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The poll title"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "The poll question"
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Poll description"
+          },
+          "creatorName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the poll creator"
+          },
+          "status": {
+            "type": "string",
+            "description": "Poll status (ACTIVE, CLOSED, etc.)"
+          },
+          "maxSelections": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of options that can be selected"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime when poll expires"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 datetime when poll was created"
+          },
+          "totalVotes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of votes"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "text", "voteCount", "percentage"],
+              "properties": {
+                "id": { 
+                  "type": "integer",
+                  "description": "Option identifier"
+                },
+                "text": { 
+                  "type": "string",
+                  "description": "Option text"
+                },
+                "voteCount": { 
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of votes for this option"
+                },
+                "percentage": { 
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "Percentage of total votes"
+                }
+              }
+            },
+            "description": "List of poll options with vote counts"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "pageable": {
+      "type": "object",
+      "description": "Spring Data pageable information",
+      "required": ["pageNumber", "pageSize", "offset", "paged", "unpaged"],
+      "properties": {
+        "pageNumber": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Current page number (0-indexed)"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of items per page"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Offset from the start of the dataset"
+        },
+        "sort": {
+          "type": "object",
+          "properties": {
+            "sorted": { "type": "boolean" },
+            "empty": { "type": "boolean" },
+            "unsorted": { "type": "boolean" }
+          }
+        },
+        "paged": {
+          "type": "boolean",
+          "description": "Whether the result is paged"
+        },
+        "unpaged": {
+          "type": "boolean",
+          "description": "Whether the result is unpaged"
+        }
+      }
+    },
+    "totalPages": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of pages"
+    },
+    "totalElements": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of items across all pages"
+    },
+    "last": {
+      "type": "boolean",
+      "description": "Whether this is the last page"
+    },
+    "first": {
+      "type": "boolean",
+      "description": "Whether this is the first page"
+    },
+    "numberOfElements": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of elements in current page"
+    },
+    "size": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Page size"
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current page number (0-indexed)"
+    },
+    "sort": {
+      "type": "object",
+      "description": "Sort information",
+      "properties": {
+        "sorted": { 
+          "type": "boolean",
+          "description": "Whether the result is sorted"
+        },
+        "empty": { 
+          "type": "boolean",
+          "description": "Whether sort is empty"
+        },
+        "unsorted": { 
+          "type": "boolean",
+          "description": "Whether the result is unsorted"
+        }
+      }
+    },
+    "empty": {
+      "type": "boolean",
+      "description": "Whether the page is empty"
+    }
+  },
+  "additionalProperties": false
+}
