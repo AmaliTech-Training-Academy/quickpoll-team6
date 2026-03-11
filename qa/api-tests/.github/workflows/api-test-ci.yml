@@ -3,7 +3,7 @@ name: API Test Automation CI
 # Triggers: run CI on pushes/PRs to develop branch, and allow manual runs.
 on:
   push:
-    branches: [ develop ]
+    branches: [ develop, feature/auth-and-poll-tests ]
   pull_request:
     branches: [ develop ]
   workflow_dispatch:
