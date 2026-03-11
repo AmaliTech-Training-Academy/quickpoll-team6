@@ -150,7 +150,7 @@ export class PollListComponent implements OnInit {
     return (
       poll.creatorId === this.currentUser.id ||
       poll.creator_id === this.currentUser.id ||
-      poll.creatorName === this.currentUser.fullName
+      poll.creatorName === this.currentUser.name
     );
   }
 

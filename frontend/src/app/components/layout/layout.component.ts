@@ -13,7 +13,6 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { DepartmentIndicatorComponent } from '@/components/ui/department-indicator.component';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
-import { ThemeToggleComponent } from '@/components/ui/theme-toggle.component';
 import { UserMenuComponent } from '@/components/ui/user-menu.component';
 
 @Component({
@@ -25,7 +24,6 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
     RouterLinkActive,
     DepartmentIndicatorComponent,
     ButtonComponent,
-    ThemeToggleComponent,
     UserMenuComponent,
   ],
   template: `
@@ -37,7 +35,6 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
           <div class="flex items-center justify-between gap-3 p-1">
             <app-department-indicator />
             <div class="flex items-center gap-2">
-              <app-theme-toggle />
               <app-user-menu />
             </div>
           </div>

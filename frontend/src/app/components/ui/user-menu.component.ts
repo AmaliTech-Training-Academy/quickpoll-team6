@@ -2,32 +2,38 @@ import { AsyncPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeUser } from '@ng-icons/huge-icons';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
+import { UserAvatarComponent } from '@/components/ui/user-avatar.component';
 
 @Component({
   selector: 'app-user-menu',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, RouterLink, AsyncPipe, NgIcon],
-  providers: [provideIcons({ hugeUser })],
+  imports: [ButtonComponent, RouterLink, AsyncPipe, UserAvatarComponent],
   template: `
-    <button
-      app-button
-      variant="outline"
-      routerLink="/~/account"
-      class="w-fit! size-9! px-0! rounded-full! shrink-0"
-    >
-      <!-- <div class="hidden md:flex flex-col items-end">
-        <p class="text-xs font-medium">{{ (user | async)?.fullName }}</p>
-        <p class="text-xs text-muted-foreground">{{ (user | async)?.email }}</p>
-      </div> -->
-      <div
-        class="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground"
-      >
-        <ng-icon name="hugeUser" />
-      </div>
-    </button>
+    <div class="flex items-center gap-2">
+      @if (user | async; as currentUser) {
+        <div class="hidden md:flex flex-col items-end">
+          <p class="text-xs font-medium">{{ currentUser.name }}</p>
+          <p class="text-xs text-muted-foreground">{{ currentUser.email }}</p>
+        </div>
+        <button
+          app-button
+          variant="outline"
+          routerLink="/~/account"
+          class="w-fit! size-9! px-0! rounded-full! shrink-0"
+        >
+          <app-user-avatar class="inline-flex size-9 shrink-0" [name]="currentUser.name" />
+        </button>
+      } @else {
+        <div class="hidden md:flex flex-col items-end gap-1">
+          <div class="h-3 w-24 rounded bg-muted animate-pulse"></div>
+          <div class="h-3 w-32 rounded bg-muted animate-pulse"></div>
+        </div>
+        <div
+          class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-secondary/50 animate-pulse"
+        ></div>
+      }
+    </div>
   `,
 })
 export class UserMenuComponent {

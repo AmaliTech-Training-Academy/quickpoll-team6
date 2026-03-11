@@ -3,49 +3,79 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
 import { User } from '@/models';
+import { UserAvatarComponent } from '@/components/ui/user-avatar.component';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 
 @Component({
   selector: 'app-profile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, InputComponent, FormsModule],
+  imports: [ButtonComponent, InputComponent, FormsModule, UserAvatarComponent],
   template: `
-    <div class="flex max-lg:flex-col gap-16">
-      <div class="flex flex-col gap-5 md:min-w-100">
-        <div class="w-full aspect-square border rounded-xl bg-secondary/50"></div>
-        <div class="flex gap-2">
-          @if (isEditing()) {
-            <button app-button variant="primary" (click)="saveEdit()">Save</button>
-            <button app-button variant="outline" (click)="cancelEdit()">Cancel</button>
-          } @else {
-            <button app-button variant="primary" (click)="startEdit()">Edit Profile</button>
-          }
-          <button app-button variant="destructive" (click)="logout()">Logout</button>
+    @if (!isLoading()) {
+      <div class="flex max-lg:flex-col gap-16">
+        <div class="flex flex-col gap-5 md:min-w-90">
+          <app-user-avatar class="w-full aspect-square" [name]="user()?.name" size="xl" />
+          <div class="flex gap-2">
+            @if (isEditing()) {
+              <button app-button variant="primary" (click)="saveEdit()">Save</button>
+              <button app-button variant="outline" (click)="cancelEdit()">Cancel</button>
+            } @else {
+              <button app-button variant="primary" (click)="startEdit()">Edit Profile</button>
+            }
+            <button app-button variant="destructive" (click)="logout()">Logout</button>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3 w-full">
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <p class="text-sm text-muted-foreground font-medium">Name</p>
+            @if (isEditing()) {
+              <input app-input [(ngModel)]="editName" />
+            } @else {
+              <p class="text-sm">{{ user()?.name }}</p>
+            }
+          </div>
+
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <p class="text-sm text-muted-foreground font-medium">Email</p>
+            <p class="text-sm">{{ user()?.email }}</p>
+          </div>
+
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <p class="text-sm text-muted-foreground font-medium">Role</p>
+            <p class="text-sm">{{ user()?.role }}</p>
+          </div>
         </div>
       </div>
-
-      <div class="flex flex-col gap-3 w-full">
-        <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
-          <p class="text-sm text-muted-foreground font-medium">Name</p>
-          @if (isEditing()) {
-            <input app-input [(ngModel)]="editName" />
-          } @else {
-            <p class="text-sm">{{ user()?.fullName }}</p>
-          }
+    } @else {
+      <div class="flex max-lg:flex-col gap-16 animate-pulse">
+        <div class="flex flex-col gap-5 md:min-w-90">
+          <div class="w-full aspect-square rounded-full border bg-muted/60"></div>
+          <div class="flex gap-2">
+            <div class="h-10 flex-1 rounded-md bg-muted"></div>
+            <div class="h-10 flex-1 rounded-md bg-muted"></div>
+          </div>
         </div>
 
-        <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
-          <p class="text-sm text-muted-foreground font-medium">Email</p>
-          <p class="text-sm">{{ user()?.email }}</p>
-        </div>
+        <div class="flex flex-col gap-3 w-full">
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <div class="h-4 w-16 rounded-md bg-muted"></div>
+            <div class="h-5 w-40 rounded-md bg-muted"></div>
+          </div>
 
-        <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
-          <p class="text-sm text-muted-foreground font-medium">Role</p>
-          <p class="text-sm">{{ user()?.role }}</p>
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <div class="h-4 w-16 rounded-md bg-muted"></div>
+            <div class="h-5 w-56 rounded-md bg-muted"></div>
+          </div>
+
+          <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
+            <div class="h-4 w-16 rounded-md bg-muted"></div>
+            <div class="h-5 w-24 rounded-md bg-muted"></div>
+          </div>
         </div>
       </div>
-    </div>
+    }
   `,
 })
 export class ProfileComponent implements OnInit {
@@ -53,17 +83,19 @@ export class ProfileComponent implements OnInit {
   private router = inject(Router);
 
   protected user = signal<User | null>(null);
+  protected isLoading = signal(true);
   protected isEditing = signal(false);
   protected editName = '';
 
   ngOnInit() {
     this.authService.getProfile().subscribe((profile) => {
       this.user.set(profile);
+      this.isLoading.set(false);
     });
   }
 
   startEdit() {
-    this.editName = this.user()?.fullName ?? '';
+    this.editName = this.user()?.name || '...';
     this.isEditing.set(true);
   }
 

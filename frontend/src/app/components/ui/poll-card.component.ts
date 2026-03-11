@@ -12,7 +12,7 @@ type PollOption = {
   percentage: number;
 };
 
-type Poll = {
+type Poll = { // TODO
   id: string | number;
   question: string;
   description?: string | null;

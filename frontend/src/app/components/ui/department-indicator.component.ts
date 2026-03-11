@@ -1,21 +1,22 @@
 import { AsyncPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeUserMultiple } from '@ng-icons/huge-icons';
+import { hugeBuilding06 } from '@ng-icons/huge-icons';
 import { map } from 'rxjs';
 
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { AuthService } from '@/services/auth.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-department-indicator',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, NgIcon, AsyncPipe],
-  providers: [provideIcons({ hugeUserMultiple })],
+  imports: [ButtonComponent, NgIcon, AsyncPipe, RouterLink],
+  providers: [provideIcons({ hugeBuilding06 })],
   template: `
-    <button app-button variant="outline" size="md" type="button" class="font-normal!" disabled>
-      <ng-icon name="hugeUserMultiple" />
-      {{ departmentLabel$ | async }} <span class="text-destructive">error</span>
+    <button routerLink="/~/account/team" app-button variant="outline" size="sm" type="button" class="font-normal!">
+      <ng-icon name="hugeBuilding06" />
+      {{ departmentLabel$ | async }}
     </button>
   `,
 })
@@ -24,13 +25,12 @@ export class DepartmentIndicatorComponent {
 
   protected readonly departmentLabel$ = this.authService.getProfile().pipe(
     map((user) => {
-      const departmentName =
-        (user as { departmentName?: string | null }).departmentName ??
-        (user as { department?: { name?: string | null } | null }).department?.name ??
-        (user as { department?: string | null }).department ??
-        null;
+      const departmentName = user.departments
+        ?.map((department) => department.name?.trim())
+        .filter((name): name is string => !!name)
+        .join(', ');
 
-      return departmentName?.trim() || 'No Department';
+      return departmentName || 'No Department';
     }),
   );
 }

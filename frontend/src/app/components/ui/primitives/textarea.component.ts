@@ -9,6 +9,7 @@ import { NgpTextarea } from 'ng-primitives/textarea';
   styles: `
     :host {
       min-height: 7rem;
+      max-height: 14rem;
       width: 100%;
       border-radius: var(--radius);
       padding: 0.75rem 1rem;
@@ -17,10 +18,11 @@ import { NgpTextarea } from 'ng-primitives/textarea';
       border: 1px solid transparent;
       outline: none;
       box-sizing: border-box;
+      field-sizing: content;
       font-family: inherit;
       font-size: 0.875rem;
       line-height: 1.5;
-      resize: vertical;
+      resize: none;
       transition:
         border-color 200ms ease-out,
         outline-color 200ms ease-out,

@@ -22,8 +22,6 @@ import { InputComponent } from '@/components/ui/primitives/input.component';
 import { TextareaComponent } from '@/components/ui/primitives/textarea.component';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { SwitchComponent } from '@/components/ui/primitives/switch.component';
-import { RadioGroupComponent } from '@/components/ui/primitives/radio-group.component';
-import { RadioItemComponent } from '@/components/ui/primitives/radio-item.component';
 import { ContentHeaderComponent } from '@/components/ui/content-header.component';
 import { DialogComponent } from '@/components/ui/primitives/dialog.component';
 import { PollDepartmentSectionComponent } from '@/components/ui/poll-department-section.component';
@@ -39,8 +37,6 @@ type PollAudience = 'company-wide' | 'department';
     InputComponent,
     TextareaComponent,
     SwitchComponent,
-    RadioGroupComponent,
-    RadioItemComponent,
     ContentHeaderComponent,
     DialogComponent,
     PollDepartmentSectionComponent,
@@ -53,13 +49,7 @@ type PollAudience = 'company-wide' | 'department';
   ],
   providers: [provideIcons({ hugeAdd01, hugeAlertCircle, hugeCancel01, hugeDragDropVertical })],
   template: `
-    <app-content-header pageTitle="Create Poll">
-      <div class="flex items-center gap-3">
-        <button [ngpDialogTrigger]="clearDialog" app-button type="button" variant="outline">
-          Clear
-        </button>
-      </div>
-    </app-content-header>
+    <app-content-header pageTitle="Create Poll" />
 
     <div class="maxview-container lg:max-w-4xl p-5">
       @if (error) {
@@ -109,38 +99,71 @@ type PollAudience = 'company-wide' | 'department';
                   id="description"
                   app-textarea
                   formControlName="description"
-                  rows="5"
-                  placeholder="Add more context for voters (optional)"
-                  class="min-h-28 resize-none"
+                  rows="3"
+                  placeholder="Add more context for voters"
                 ></textarea>
+              </div>
+
+              <div class="flex flex-col gap-2 sm:max-w-sm">
+                <label for="expiresAt" class="text-base font-medium text-foreground">
+                  Expiry date and time
+                </label>
+                <input
+                  id="expiresAt"
+                  app-input
+                  type="datetime-local"
+                  formControlName="expiresAt"
+                  required
+                />
+                @if (
+                  newPollForm.controls.expiresAt.touched && newPollForm.controls.expiresAt.errors
+                ) {
+                  <div class="form-field-error" role="alert" aria-live="assertive">
+                    @if (newPollForm.controls.expiresAt.errors['required']) {
+                      <span>Please choose an expiry date and time.</span>
+                    }
+                  </div>
+                }
               </div>
             </div>
           </div>
 
           <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
             <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1">
-                <h2 class="text-base font-medium text-foreground">Question type</h2>
-                <p class="text-sm text-muted-foreground">
-                  Choose whether voters can select one option or multiple options.
-                </p>
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-base font-medium text-foreground">Allow multiple selections</h2>
+                  <p class="text-sm text-muted-foreground">
+                    Let voters choose more than one option for this poll.
+                  </p>
+                </div>
+
+                <app-switch
+                  [checked]="allowsMultipleSelections()"
+                  (checkedChange)="onAllowMultipleSelectionsChange($event)"
+                />
               </div>
 
-              <app-radio-group formControlName="selectionType" class="grid! sm:grid-cols-2! gap-3">
-                <app-radio-item value="single">
-                  <span class="block text-sm font-medium text-inherit">Single select</span>
-                  <span class="mt-1 block text-xs text-muted-foreground">
-                    Voters can choose only one option.
-                  </span>
-                </app-radio-item>
-
-                <app-radio-item value="multiple">
-                  <span class="block text-sm font-medium text-inherit">Multi select</span>
-                  <span class="mt-1 block text-xs text-muted-foreground">
-                    Voters can choose more than one option.
-                  </span>
-                </app-radio-item>
-              </app-radio-group>
+              @if (allowsMultipleSelections()) {
+                <div class="flex flex-col gap-2 sm:max-w-xs">
+                  <label for="maxSelections" class="text-sm font-medium text-foreground">
+                    Maximum selections
+                  </label>
+                  <input
+                    id="maxSelections"
+                    app-input
+                    type="number"
+                    min="1"
+                    [max]="validOptionCount() || getOptions().length"
+                    [value]="newPollForm.controls.maxSelections.value ?? ''"
+                    (input)="onMaxSelectionsInput($event)"
+                    placeholder="Leave blank to match the number of options"
+                  />
+                  <p class="text-xs text-muted-foreground">
+                    Leave this blank to match the number of options
+                  </p>
+                </div>
+              }
             </div>
           </div>
 
@@ -241,10 +264,11 @@ type PollAudience = 'company-wide' | 'department';
           <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
             <div class="flex flex-col gap-2">
               <app-poll-department-section
-                [departmentId]="newPollForm.controls.departmentId.value"
-                (departmentIdChange)="onDepartmentIdChange($event)"
+                [departmentIds]="newPollForm.controls.departmentIds.value ?? []"
+                (departmentIdsChange)="onDepartmentIdsChange($event)"
                 [audience]="newPollForm.controls.audience.value ?? 'company-wide'"
                 (audienceChange)="onAudienceChange($event)"
+                (departmentNamesChange)="selectedDepartmentNames = $event"
               />
 
               @if (
@@ -252,7 +276,7 @@ type PollAudience = 'company-wide' | 'department';
                 newPollForm.controls.audience.errors?.['departmentRequired']
               ) {
                 <div class="form-field-error" role="alert" aria-live="assertive">
-                  <span>Please select a department.</span>
+                  <span>Please select at least one department.</span>
                 </div>
               }
             </div>
@@ -267,25 +291,97 @@ type PollAudience = 'company-wide' | 'department';
       </form>
     </div>
 
-    <ng-template #clearDialog let-close="close">
-      <app-dialog header="Clear form?">
-        This will remove your current question, description, department selection, and options.
-        <div slot="actions">
-          <div class="flex justify-between">
-            <button app-button type="button" variant="outline" (click)="close()">
-              Keep Editing
-            </button>
-            <button app-button type="button" variant="destructive" (click)="clearForm(); close()">
-              Clear
-            </button>
-          </div>
-        </div>
-      </app-dialog>
-    </ng-template>
-
     <ng-template #submitDialog let-close="close">
       <app-dialog header="Create this poll?">
-        This will submit your poll with the current question, department, and options.
+        <div class="space-y-4">
+          <p class="text-sm text-muted-foreground">
+            Review the details below before submitting your poll.
+          </p>
+
+          <div class="rounded-xl border bg-muted/30 p-4">
+            <dl class="space-y-3 text-sm">
+              <div class="space-y-1">
+                <dt class="font-medium text-foreground">Question</dt>
+                <dd class="text-muted-foreground">
+                  {{ newPollForm.controls.question.value || 'No question provided' }}
+                </dd>
+              </div>
+
+              <div class="space-y-1">
+                <dt class="font-medium text-foreground">Description</dt>
+                <dd class="text-muted-foreground">
+                  {{ newPollForm.controls.description.value || 'No description provided' }}
+                </dd>
+              </div>
+
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-1">
+                  <dt class="font-medium text-foreground">Allow multiple selections</dt>
+                  <dd class="text-muted-foreground">
+                    {{ allowsMultipleSelections() ? 'Yes' : 'No' }}
+                  </dd>
+                </div>
+
+                <div class="space-y-1">
+                  <dt class="font-medium text-foreground">Max selections</dt>
+                  <dd class="text-muted-foreground">
+                    {{ resolvedMaxSelections() }}
+                  </dd>
+                </div>
+
+                <div class="space-y-1">
+                  <dt class="font-medium text-foreground">Voting</dt>
+                  <dd class="text-muted-foreground">
+                    {{ newPollForm.controls.anonymous.value ? 'Anonymous' : 'Not anonymous' }}
+                  </dd>
+                </div>
+
+                <div class="space-y-1">
+                  <dt class="font-medium text-foreground">Expires at</dt>
+                  <dd class="text-muted-foreground">
+                    {{ newPollForm.controls.expiresAt.value || 'No expiry selected' }}
+                  </dd>
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <dt class="font-medium text-foreground">Audience</dt>
+                <dd class="text-muted-foreground">
+                  {{
+                    newPollForm.controls.audience.value === 'department'
+                      ? 'Specific department'
+                      : 'Company-wide'
+                  }}
+                </dd>
+              </div>
+
+              @if (newPollForm.controls.audience.value === 'department') {
+                <div class="space-y-1">
+                  <dt class="font-medium text-foreground">Departments</dt>
+                  <dd class="text-muted-foreground">
+                    {{
+                      selectedDepartmentNames.length
+                        ? selectedDepartmentNames.join(', ')
+                        : 'No departments selected'
+                    }}
+                  </dd>
+                </div>
+              }
+
+              <div class="space-y-2">
+                <dt class="font-medium text-foreground">Options</dt>
+                <dd>
+                  <ul class="list-disc space-y-1 pl-5 text-muted-foreground">
+                    @for (option of getOptions(); track $index) {
+                      <li>{{ option || 'Untitled option' }}</li>
+                    }
+                  </ul>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
         <div slot="actions" class="justify-between flex">
           <button app-button type="button" variant="outline" (click)="close()">Cancel</button>
           <button app-button type="button" variant="primary" (click)="close(); submitPoll()">
@@ -326,20 +422,59 @@ export class CreatePollComponent {
   protected newPollForm = this.formBuilder.group({
     question: ['', Validators.required],
     description: [''],
-    selectionType: ['single' as 'single' | 'multiple', Validators.required],
+    maxSelections: [1 as number | null],
     anonymous: [true, Validators.required],
+    expiresAt: ['', Validators.required],
     audience: ['company-wide' as PollAudience, Validators.required],
-    departmentId: [null as number | null],
+    departmentIds: [[] as number[]],
     options: [
       ['', ''],
       [Validators.required, Validators.min(2)],
     ],
   });
 
-  error = '';
+  protected error = '';
+  protected selectedDepartmentNames: string[] = [];
+  protected multipleSelectionsEnabled = false;
 
   getOptions(): string[] {
     return this.newPollForm.controls.options.value ?? ['', ''];
+  }
+
+  allowsMultipleSelections(): boolean {
+    return this.multipleSelectionsEnabled;
+  }
+
+  resolvedMaxSelections(): number {
+    if (!this.allowsMultipleSelections()) {
+      return 1;
+    }
+
+    const maxSelections = this.newPollForm.controls.maxSelections.value;
+    return maxSelections ?? this.validOptionCount();
+  }
+
+  onAllowMultipleSelectionsChange(enabled: boolean) {
+    this.multipleSelectionsEnabled = enabled;
+    this.newPollForm.controls.maxSelections.setValue(enabled ? null : 1);
+    this.cdr.markForCheck();
+  }
+
+  onMaxSelectionsInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const rawValue = input.value.trim();
+
+    if (!rawValue) {
+      this.newPollForm.controls.maxSelections.setValue(null);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const parsedValue = Number(rawValue);
+    this.newPollForm.controls.maxSelections.setValue(
+      Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null,
+    );
+    this.cdr.markForCheck();
   }
 
   updateOption(index: number, event: Event) {
@@ -353,17 +488,17 @@ export class CreatePollComponent {
     this.newPollForm.controls.audience.setValue(audience);
 
     if (audience === 'company-wide') {
-      this.newPollForm.controls.departmentId.setValue(null);
+      this.newPollForm.controls.departmentIds.setValue([]);
       this.newPollForm.controls.audience.setErrors(null);
     }
 
     this.cdr.markForCheck();
   }
 
-  onDepartmentIdChange(departmentId: number | null) {
-    this.newPollForm.controls.departmentId.setValue(departmentId);
+  onDepartmentIdsChange(departmentIds: number[]) {
+    this.newPollForm.controls.departmentIds.setValue(departmentIds);
 
-    if (departmentId !== null) {
+    if (departmentIds.length > 0) {
       this.newPollForm.controls.audience.setErrors(null);
     }
 
@@ -392,6 +527,16 @@ export class CreatePollComponent {
 
     options.splice(index, 1);
     this.newPollForm.controls.options.setValue(options);
+
+    if (this.allowsMultipleSelections()) {
+      const maxSelections = this.newPollForm.controls.maxSelections.value;
+      const validOptions = options.filter((option: string) => option.trim()).length;
+
+      if (maxSelections != null && validOptions > 0 && maxSelections > validOptions) {
+        this.newPollForm.controls.maxSelections.setValue(validOptions);
+      }
+    }
+
     this.cdr.markForCheck();
   }
 
@@ -399,13 +544,16 @@ export class CreatePollComponent {
     this.newPollForm.reset({
       question: '',
       description: '',
-      selectionType: 'single',
+      maxSelections: 1,
       anonymous: true,
+      expiresAt: '',
       audience: 'company-wide',
-      departmentId: null,
+      departmentIds: [],
       options: ['', ''],
     });
     this.error = '';
+    this.selectedDepartmentNames = [];
+    this.multipleSelectionsEnabled = false;
     this.cdr.markForCheck();
   }
 
@@ -420,13 +568,26 @@ export class CreatePollComponent {
   }
 
   submitPoll() {
-    const { question, description, selectionType, anonymous, audience, departmentId, options } =
-      this.newPollForm.getRawValue();
+    const {
+      question,
+      description,
+      maxSelections,
+      anonymous,
+      expiresAt,
+      audience,
+      departmentIds,
+      options,
+    } = this.newPollForm.getRawValue();
 
     const trimmedQuestion = (question ?? '').trim();
+    const normalizedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : '';
     const normalizedOptions = (options ?? []).map((option: string) => option.trim());
     const validOptions = normalizedOptions.filter((option: string) => option.length > 0);
     const hasBlankOptions = normalizedOptions.some((option: string) => option.length === 0);
+    const allowsMultipleSelections = this.allowsMultipleSelections();
+    const resolvedMaxSelections = allowsMultipleSelections
+      ? (maxSelections ?? validOptions.length)
+      : 1;
 
     this.error = '';
     this.cdr.markForCheck();
@@ -436,6 +597,12 @@ export class CreatePollComponent {
     if (!trimmedQuestion) {
       this.newPollForm.controls.question.markAsTouched();
       this.newPollForm.controls.question.setErrors({ required: true });
+      hasErrors = true;
+    }
+
+    if (!normalizedExpiresAt) {
+      this.newPollForm.controls.expiresAt.markAsTouched();
+      this.newPollForm.controls.expiresAt.setErrors({ required: true });
       hasErrors = true;
     }
 
@@ -449,7 +616,17 @@ export class CreatePollComponent {
       hasErrors = true;
     }
 
-    if (audience === 'department' && departmentId == null) {
+    if (allowsMultipleSelections) {
+      if (resolvedMaxSelections < 1) {
+        hasErrors = true;
+      }
+
+      if (resolvedMaxSelections > validOptions.length) {
+        hasErrors = true;
+      }
+    }
+
+    if (audience === 'department' && (departmentIds?.length ?? 0) === 0) {
       this.newPollForm.controls.audience.markAsTouched();
       this.newPollForm.controls.audience.setErrors({ departmentRequired: true });
       hasErrors = true;
@@ -461,9 +638,13 @@ export class CreatePollComponent {
     }
 
     this.newPollForm.controls.question.setValue(trimmedQuestion);
+    this.newPollForm.controls.expiresAt.setValue(expiresAt ?? '');
     this.newPollForm.controls.options.setValue(validOptions);
+    this.newPollForm.controls.maxSelections.setValue(resolvedMaxSelections);
     this.newPollForm.controls.question.updateValueAndValidity();
+    this.newPollForm.controls.expiresAt.updateValueAndValidity();
     this.newPollForm.controls.options.updateValueAndValidity();
+    this.newPollForm.controls.maxSelections.updateValueAndValidity();
     this.newPollForm.controls.audience.updateValueAndValidity();
 
     this.pollService
@@ -471,9 +652,11 @@ export class CreatePollComponent {
         question: trimmedQuestion,
         description: description?.trim() ?? '',
         options: validOptions,
-        multipleChoice: selectionType === 'multiple',
+        maxSelections: resolvedMaxSelections,
+        multipleChoice: allowsMultipleSelections,
         anonymous,
-        departmentId: audience === 'department' ? departmentId : null,
+        expiresAt: normalizedExpiresAt,
+        departmentIds: audience === 'department' ? (departmentIds ?? []) : [],
       })
       .subscribe({
         next: (res: any) => this.router.navigate(['/~/polls', res.id]),

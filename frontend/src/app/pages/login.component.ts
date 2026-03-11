@@ -5,11 +5,18 @@ import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '@/services/auth.service';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { InputComponent } from '@/components/ui/primitives/input.component';
+import { PasswordFieldComponent } from '@/components/ui/primitives/password-field.component';
 
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, InputComponent, ReactiveFormsModule, RouterLink],
+  imports: [
+    ButtonComponent,
+    InputComponent,
+    ReactiveFormsModule,
+    RouterLink,
+    PasswordFieldComponent,
+  ],
   template: `
     <div class="max-w-100 m-15 mx-auto flex flex-col">
       <h1 class="mb-8 text-xl md:text-3xl font-semibold text-center">Welcome back</h1>
@@ -39,9 +46,7 @@ import { InputComponent } from '@/components/ui/primitives/input.component';
         </div>
 
         <div>
-          <input
-            app-input
-            type="password"
+          <app-password-field
             placeholder="Password"
             formControlName="password"
             name="password"

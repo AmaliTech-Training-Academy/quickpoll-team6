@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import { User } from '@/models';
+import { AuthResponse, User } from '@/models';
 import { API_BASE_URL } from '@/constants';
 
 @Injectable({ providedIn: 'root' })
@@ -11,19 +11,24 @@ export class AuthService {
   private readonly usersApiUrl = `${API_BASE_URL}/users`;
   private readonly http = inject(HttpClient);
 
-  login(email: string, password: string): Observable<any> {
-    return this.http.post(`${this.authApiUrl}/login`, { email, password }).pipe(
-      tap((res: any) => {
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.authApiUrl}/login`, { email, password }).pipe(
+      tap((res) => {
         localStorage.setItem(this.AUTH_TOKEN_KEY, res.token);
       }),
     );
   }
 
-  register(name: string, email: string, password: string, departmentId?: number): Observable<any> {
+  register(
+    name: string,
+    email: string,
+    password: string,
+    departmentId?: number,
+  ): Observable<AuthResponse> {
     return this.http
-      .post(`${this.authApiUrl}/register`, { name, email, password, departmentId })
+      .post<AuthResponse>(`${this.authApiUrl}/register`, { name, email, password, departmentId })
       .pipe(
-        tap((res: any) => {
+        tap((res) => {
           localStorage.setItem(this.AUTH_TOKEN_KEY, res.token);
         }),
       );

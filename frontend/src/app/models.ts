@@ -1,9 +1,16 @@
+export interface Department {
+  id: number;
+  name: string;
+}
+
 export interface User {
   id: number;
   email: string;
-  fullName: string | null;
+  name: string;
   role: string;
-  createdAt: string | null;
+  departments: Department[];
+  createdAt?: string | null;
+  created_at?: string | null;
 }
 
 export interface AuthResponse {
@@ -11,11 +18,6 @@ export interface AuthResponse {
   email: string;
   name: string;
   role: string;
-}
-
-export interface Department {
-  id: number;
-  name: string;
 }
 
 export interface DepartmentMember {
@@ -26,12 +28,14 @@ export interface DepartmentMember {
 
 export interface Poll {
   id: number;
+  title?: string | null;
   question: string;
   description: string | null;
   creator_id: number;
-  multi_select: boolean | null;
+  maxSelections?: number | null;
   anonymous: boolean;
-  expires_at: string | null;
+  departmentIds?: number[] | null;
+  expiresAt?: string | null;
   active: boolean | null;
   created_at: string | null;
 }
@@ -57,4 +61,25 @@ export interface Vote {
   option_id: number;
   user_id: number;
   created_at: string | null;
+}
+
+export interface PollResultOption {
+  id: number;
+  text: string;
+  voteCount: number;
+  percentage: number;
+}
+
+export interface PollResult {
+  id: number;
+  title: string;
+  question: string;
+  description: string;
+  creatorName: string;
+  status: string;
+  maxSelections: number;
+  expiresAt: string;
+  createdAt: string;
+  totalVotes: number;
+  options: PollResultOption[];
 }

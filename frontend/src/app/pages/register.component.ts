@@ -1,5 +1,5 @@
 import { Router, RouterLink } from '@angular/router';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -10,8 +10,12 @@ import {
 } from '@angular/forms';
 
 import { AuthService } from '@/services/auth.service';
+import { DepartmentService } from '@/services/department.service';
+import { Department } from '@/models';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { InputComponent } from '@/components/ui/primitives/input.component';
+import { ComboboxComponent } from '@/components/ui/primitives/combobox.component';
+import { PasswordFieldComponent } from '@/components/ui/primitives/password-field.component';
 
 const passwordMatchValidator: ValidatorFn = (group: AbstractControl): ValidationErrors | null => {
   const password = group.get('password')?.value;
@@ -22,7 +26,14 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
 @Component({
   selector: 'app-register',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, InputComponent, ReactiveFormsModule, RouterLink],
+  imports: [
+    ButtonComponent,
+    InputComponent,
+    ReactiveFormsModule,
+    RouterLink,
+    ComboboxComponent,
+    PasswordFieldComponent,
+  ],
   template: `
     <div class="max-w-100 m-15 mx-auto flex flex-col">
       <h1 class="mb-8 text-xl md:text-3xl font-semibold text-center">Welcome to Quickpoll</h1>
@@ -99,9 +110,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
         </div>
 
         <div>
-          <input
-            app-input
-            type="password"
+          <app-password-field
             name="password"
             formControlName="password"
             placeholder="Password"
@@ -115,14 +124,18 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
               @if (registerForm.get('password')?.errors?.['minlength']) {
                 <span>Password must be at least 8 characters.</span>
               }
+              @if (registerForm.get('password')?.errors?.['pattern']) {
+                <span
+                  >Password must contain at least one uppercase letter, one lowercase letter, and
+                  one special character.</span
+                >
+              }
             </div>
           }
         </div>
 
         <div>
-          <input
-            app-input
-            type="password"
+          <app-password-field
             name="confirmPassword"
             formControlName="confirmPassword"
             placeholder="Confirm password"
@@ -152,6 +165,18 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
           }
         </div>
 
+        <div>
+          <app-combobox
+            [options]="departmentNames()"
+            [value]="selectedDepartmentName()"
+            placeholder="Select a department"
+            (valueChange)="onDepartmentChange($event)"
+          />
+          @if (departmentsError()) {
+            <p class="text-destructive text-xs mt-1">{{ departmentsError() }}</p>
+          }
+        </div>
+
         <button
           app-button
           type="submit"
@@ -168,29 +193,65 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
     </div>
   `,
 })
-export class RegisterComponent {
-  private formBuilder = inject(FormBuilder);
+export class RegisterComponent implements OnInit {
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
+  private readonly departmentService = inject(DepartmentService);
+  private readonly router = inject(Router);
+
+  protected readonly departments = signal<Department[]>([]);
+  protected readonly departmentsError = signal<string | null>(null);
+
+  protected readonly departmentNames = () => this.departments().map((d) => d.name);
+
+  protected readonly selectedDepartmentName = () => {
+    const id = this.registerForm.get('department')?.value as number | null;
+    return this.departments().find((d) => d.id === id)?.name;
+  };
+
   protected registerForm = this.formBuilder.group(
     {
       firstName: ['', [Validators.required]],
       lastName: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(8),
+          Validators.pattern(
+            '^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};\':"\\\\|,.<>\\/?]).{8,72}$',
+          ),
+        ],
+      ],
       confirmPassword: ['', [Validators.required]],
+      department: [null as number | null],
     },
     { validators: passwordMatchValidator },
   );
 
-  private authService = inject(AuthService);
-  private router = inject(Router);
   protected error: string | null = null;
 
-  onSubmit() {
+  ngOnInit(): void {
+    this.departmentService.getAll().subscribe({
+      next: (departments) => this.departments.set(departments),
+      error: () => this.departmentsError.set('Unable to load departments.'),
+    });
+  }
+
+  protected onDepartmentChange(name: string | undefined): void {
+    const match = this.departments().find((d) => d.name === name);
+    this.registerForm.patchValue({ department: match?.id ?? null });
+  }
+
+  onSubmit(): void {
     if (this.registerForm.invalid) return;
 
-    const { firstName, lastName, email, password } = this.registerForm.value;
+    const { firstName, lastName, email, password, department } = this.registerForm.value;
     const name = `${firstName!.trim()} ${lastName!.trim()}`;
-    this.authService.register(name, email!, password!).subscribe({
+    const deptId = department ?? undefined;
+
+    this.authService.register(name, email!, password!, deptId).subscribe({
       next: () => this.router.navigateByUrl('/~/polls'),
       error: () => (this.error = 'Registration failed. Please try again.'),
     });
