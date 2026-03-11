@@ -24,9 +24,13 @@ def test_poll_summary_columns(polls_df, votes_df) -> None:
     result = compute_poll_summary(polls_df, votes_df, total_users=10)
     assert set(result.columns) == {
         "poll_id",
+        "creator_id",
         "title",
+        "description",
         "creator_name",
         "status",
+        "max_selections",
+        "expires_at",
         "total_votes",
         "unique_voters",
         "participation_rate",
@@ -57,6 +61,15 @@ def test_poll_summary_participation_rate(polls_df, votes_df) -> None:
     # unique_voters for poll 1 = 3, total_users = 10  →  30.0
     row1 = result[result["poll_id"] == 1].iloc[0]
     assert row1["participation_rate"] == pytest.approx(30.0)
+
+
+def test_poll_summary_preserves_dashboard_metadata(polls_df, votes_df) -> None:
+    result = compute_poll_summary(polls_df, votes_df, total_users=10)
+    row1 = result[result["poll_id"] == 1].iloc[0]
+    assert row1["creator_id"] == 1
+    assert row1["description"] == "Choose one cloud"
+    assert row1["max_selections"] == 1
+    assert row1["expires_at"] == pd.Timestamp("2026-01-05")
 
 
 # ── compute_option_breakdown ─────────────────────────────────────────────────
@@ -156,3 +169,60 @@ def test_user_participation_vote_counts(users_df, votes_df, polls_df) -> None:
 def test_user_participation_no_votes(users_df, polls_df) -> None:
     result = compute_user_participation(users_df, pd.DataFrame(), polls_df)
     assert (result["total_votes_cast"] == 0).all()
+
+
+def test_user_participation_last_active_uses_poll_creation_when_no_votes() -> None:
+    users_df = pd.DataFrame(
+        {
+            "id": [42],
+            "full_name": ["Creator"],
+            "email": ["creator@example.com"],
+            "created_at": pd.to_datetime(["2025-12-01"]),
+        }
+    )
+    polls_df = pd.DataFrame(
+        {
+            "id": [5],
+            "title": ["Launch plan"],
+            "active": [True],
+            "creator_id": [42],
+            "created_at": pd.to_datetime(["2026-01-07 10:00"]),
+        }
+    )
+
+    result = compute_user_participation(users_df, pd.DataFrame(), polls_df)
+    row = result.iloc[0]
+    assert row["polls_created"] == 1
+    assert row["last_active"] == pd.Timestamp("2026-01-07 10:00")
+
+
+def test_user_participation_last_active_is_latest_of_vote_or_poll_creation() -> None:
+    users_df = pd.DataFrame(
+        {
+            "id": [42],
+            "full_name": ["Creator"],
+            "email": ["creator@example.com"],
+            "created_at": pd.to_datetime(["2025-12-01"]),
+        }
+    )
+    votes_df = pd.DataFrame(
+        {
+            "id": [1],
+            "poll_id": [5],
+            "option_id": [7],
+            "user_id": [42],
+            "created_at": pd.to_datetime(["2026-01-07 10:00"]),
+        }
+    )
+    polls_df = pd.DataFrame(
+        {
+            "id": [5],
+            "title": ["Launch plan"],
+            "active": [True],
+            "creator_id": [42],
+            "created_at": pd.to_datetime(["2026-01-07 11:00"]),
+        }
+    )
+
+    result = compute_user_participation(users_df, votes_df, polls_df)
+    assert result.iloc[0]["last_active"] == pd.Timestamp("2026-01-07 11:00")

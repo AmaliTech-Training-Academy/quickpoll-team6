@@ -23,13 +23,16 @@ class TestSqlFileContent:
     def _content(self) -> str:
         return _SQL_FILE.read_text(encoding="utf-8")
 
-    def test_contains_all_four_functions(self) -> None:
+    def test_contains_dashboard_support_functions(self) -> None:
         content = self._content()
         for fn in (
             "fn_refresh_poll_summary",
+            "fn_refresh_poll_summaries_by_creator",
+            "fn_refresh_all_poll_summaries",
             "fn_refresh_option_breakdown",
             "fn_refresh_votes_timeseries",
             "fn_refresh_user_participation",
+            "fn_delete_poll_analytics",
         ):
             assert fn in content, f"Missing function: {fn}"
 
@@ -39,9 +42,32 @@ class TestSqlFileContent:
             "trg_vote_after_insert",
             "trg_poll_after_insert",
             "trg_poll_after_update",
+            "trg_poll_after_delete",
             "trg_user_after_insert",
+            "trg_user_after_update",
+            "trg_option_after_insert",
+            "trg_option_after_update",
+            "trg_option_after_delete",
         ):
             assert trg in content, f"Missing trigger: {trg}"
+
+    def test_schema_upgrade_columns_are_present_for_poll_summary(self) -> None:
+        content = self._content()
+        for snippet in (
+            "ADD COLUMN IF NOT EXISTS creator_id",
+            "ADD COLUMN IF NOT EXISTS description",
+            "ADD COLUMN IF NOT EXISTS max_selections",
+            "ADD COLUMN IF NOT EXISTS expires_at",
+        ):
+            assert snippet in content
+
+    def test_user_insert_refreshes_all_poll_summaries(self) -> None:
+        content = self._content()
+        assert "PERFORM fn_refresh_all_poll_summaries();" in content
+
+    def test_option_breakdown_sql_removes_stale_rows(self) -> None:
+        content = self._content()
+        assert "DELETE FROM analytics_option_breakdown" in content
 
     def test_functions_use_create_or_replace(self) -> None:
         content = self._content()

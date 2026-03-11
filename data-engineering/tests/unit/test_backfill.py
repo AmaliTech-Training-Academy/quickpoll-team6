@@ -60,6 +60,28 @@ def test_pipeline_watermarks_high_watermark_not_nullable() -> None:
     assert not pipeline_watermarks.c.high_watermark.nullable
 
 
+def test_analytics_poll_summary_contains_dashboard_columns() -> None:
+    """analytics_poll_summary exposes the fields the dashboard contract needs."""
+    from data_engineering.loading.models import analytics_poll_summary
+
+    col_names = {c.name for c in analytics_poll_summary.columns}
+    assert {
+        "poll_id",
+        "creator_id",
+        "title",
+        "description",
+        "creator_name",
+        "status",
+        "max_selections",
+        "expires_at",
+        "total_votes",
+        "unique_voters",
+        "participation_rate",
+        "created_at",
+        "last_updated",
+    }.issubset(col_names)
+
+
 # ── get_watermark / set_watermark writers ─────────────────────────────────────
 
 
@@ -127,9 +149,10 @@ def _polls_df() -> pd.DataFrame:
         {
             "id": [1, 2],
             "title": ["Poll A", "Poll B"],
+            "description": ["Desc A", "Desc B"],
             "active": [True, False],
-            "multi_select": [False, False],
             "expires_at": [None, None],
+            "max_selections": [1, 2],
             "created_at": pd.to_datetime(["2026-01-01", "2026-01-02"]),
             "creator_id": [10, 11],
             "creator_name": ["Alice", "Bob"],
