@@ -21,7 +21,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from kafka import KafkaProducer  # noqa: E402
+try:
+    from kafka import KafkaProducer  # noqa: E402
+except ImportError:
+    KafkaProducer = None  # type: ignore[assignment,misc]
 
 from data_engineering.config import (  # noqa: E402
     KAFKA_BOOTSTRAP_SERVERS,
