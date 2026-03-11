@@ -18,6 +18,7 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -110,7 +111,7 @@ class AuthServiceTest {
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(user);
-        when(departmentMemberRepository.findByEmailWithDepartment(anyString())).thenReturn(Optional.empty());
+        when(departmentMemberRepository.findAllByEmailWithDepartment(anyString())).thenReturn(List.of());
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("token");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("refreshToken");
         when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString(), any())).thenReturn(response);
@@ -146,7 +147,7 @@ class AuthServiceTest {
         when(jwtService.isTokenValid(anyString())).thenReturn(true);
         when(jwtService.extractEmail(anyString())).thenReturn("test@example.com");
         when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(user));
-        when(departmentMemberRepository.findByEmailWithDepartment(anyString())).thenReturn(Optional.empty());
+        when(departmentMemberRepository.findAllByEmailWithDepartment(anyString())).thenReturn(List.of());
         when(jwtService.generateToken(anyString(), anyString())).thenReturn("newToken");
         when(jwtService.generateRefreshToken(anyString(), anyString())).thenReturn("newRefreshToken");
         when(authMapper.toAuthServiceResponse(anyString(), anyString(), anyString(), anyString(), anyString(), any())).thenReturn(response);
