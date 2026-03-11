@@ -11,7 +11,7 @@ A comprehensive, maintainable API testing framework for the QuickPoll API built 
 - **Automatic Cleanup**: Test data is automatically cleaned up after test execution
 - **Performance Monitoring**: Built-in response time tracking and threshold validation
 - **Schema Validation**: JSON schema validation for contract testing
-- **SOLID & DRY Principles**: Clean, maintainable code following best practices
+- **SOLID & DRY Principles**: Clean, maintainable code following best practices.
 
 ## Architecture
 
