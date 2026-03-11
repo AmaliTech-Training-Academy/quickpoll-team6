@@ -5,12 +5,8 @@ import { NgpMenuItem } from 'ng-primitives/menu';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'button[app-menu-item]',
   hostDirectives: [NgpMenuItem],
-  template: `
-    <ng-content />
-  `,
+  template: ` <ng-content /> `,
   styles: `
-/* These styles rely on CSS variables that can be imported from ng-primitives/example-theme/index.css in your global styles */
-
     :host {
       display: flex;
       align-items: center;
@@ -18,6 +14,7 @@ import { NgpMenuItem } from 'ng-primitives/menu';
       padding: 6px 8px 6px 14px;
       border: none;
       background: none;
+      color: var(--foreground);
       cursor: pointer;
       transition: background-color 0.2s;
       border-radius: 4px;
@@ -29,12 +26,17 @@ import { NgpMenuItem } from 'ng-primitives/menu';
     }
 
     :host[data-hover] {
-      background-color: var(--ngp-background-active);
+      background-color: var(--secondary-hover);
     }
 
     :host[data-focus-visible] {
-      outline: 2px solid var(--ngp-focus-ring);
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
       z-index: 1;
+    }
+
+    :host[data-press] {
+      background-color: var(--secondary-active);
     }
   `,
 })

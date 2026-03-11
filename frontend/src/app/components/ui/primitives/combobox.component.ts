@@ -1,8 +1,16 @@
 import { BooleanInput } from '@angular/cdk/coercion';
-import { booleanAttribute, Component, computed, input, model, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  booleanAttribute,
+  Component,
+  computed,
+  input,
+  model,
+  signal,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroChevronDown } from '@ng-icons/heroicons/outline';
+import { hugeArrowDown01 } from '@ng-icons/huge-icons';
 import {
   NgpCombobox,
   NgpComboboxButton,
@@ -25,7 +33,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     NgpComboboxButton,
     NgIcon,
   ],
-  providers: [provideIcons({ heroChevronDown }), provideValueAccessor(ComboboxComponent)],
+  providers: [provideIcons({ hugeArrowDown01 }), provideValueAccessor(ComboboxComponent)],
   template: `
     <div
       [(ngpComboboxValue)]="value"
@@ -43,7 +51,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       />
 
       <button ngpComboboxButton aria-label="Toggle dropdown">
-        <ng-icon name="heroChevronDown" />
+        <ng-icon name="hugeArrowDown01" />
       </button>
 
       <div *ngpComboboxPortal ngpComboboxDropdown>
@@ -58,8 +66,6 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     </div>
   `,
   styles: `
-/* These styles rely on CSS variables that can be imported from ng-primitives/example-theme/index.css in your global styles */
-
     [ngpCombobox] {
       display: flex;
       justify-content: space-between;
@@ -67,9 +73,9 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       height: 36px;
       min-width: 300px;
       border-radius: 8px;
-      border: none;
+      border: 1px solid var(--border);
       background-color: var(--input);
-      box-shadow: var(--ngp-input-shadow);
+      box-shadow: none;
       box-sizing: border-box;
     }
 
@@ -98,7 +104,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       width: 36px;
       background-color: transparent;
       border: none;
-      color: var(--ngp-text);
+      color: var(--muted-foreground);
       cursor: pointer;
       box-sizing: border-box;
     }
@@ -112,7 +118,9 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       position: absolute;
       animation: popover-show 0.1s ease-out;
       width: var(--ngp-combobox-width);
-      box-shadow: var(--ngp-shadow-lg);
+      box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.08),
+        0 4px 6px -4px rgb(0 0 0 / 0.08);
       box-sizing: border-box;
       margin-top: 4px;
       max-height: 240px;
@@ -138,7 +146,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       width: 100%;
       height: 36px;
       font-size: 14px;
-      color: var(--ngp-text-primary);
+      color: var(--foreground);
       box-sizing: border-box;
     }
 
@@ -151,7 +159,8 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     }
 
     [ngpComboboxOption][data-active] {
-      background-color: var(--ngp-background-active);
+      background-color: var(--secondary);
+      color: var(--secondary-foreground);
     }
 
     .empty-message {
@@ -208,7 +217,7 @@ export class ComboboxComponent implements ControlValueAccessor {
 
   /** Get the filtered options. */
   protected readonly filteredOptions = computed(() =>
-    this.options().filter(option => option.toLowerCase().includes(this.filter().toLowerCase())),
+    this.options().filter((option) => option.toLowerCase().includes(this.filter().toLowerCase())),
   );
 
   /** Store the form disabled state */

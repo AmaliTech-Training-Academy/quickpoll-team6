@@ -8,7 +8,7 @@ import { SecondaryNavbarComponent } from '../ui/navbar.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ContentHeaderComponent, SecondaryNavbarComponent, RouterOutlet],
   template: `
-    <app-content-header title="Account" />
+    <app-content-header pageTitle="Account" />
     <div class="p-5 flex flex-col maxview-container gap-5">
       <app-secondary-navbar [navLinks]="navLinks" />
       <router-outlet />

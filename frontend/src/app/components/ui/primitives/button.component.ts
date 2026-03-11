@@ -53,7 +53,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'outline' 
 
     :host[data-press] {
       scale: 0.99;
-      background-color: var(--ngp-background-active);
+      background-color: var(--primary-active);
       transition: transform 300ms ease-in;
     }
 
@@ -125,33 +125,33 @@ export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'outline' 
     }
 
     :host[data-variant='destructive'] {
-      background-color: var(--destructive, #ef4444);
-      color: var(--destructive-foreground, #ffffff);
+      background-color: var(--destructive);
+      color: var(--destructive-foreground);
       border: none;
     }
 
     :host[data-variant='destructive'][data-hover] {
-      background-color: var(--ngp-destructive-background-hover, #dc2626);
+      background-color: color-mix(in oklab, var(--destructive) 92%, black);
     }
 
     :host[data-variant='destructive'][data-press] {
-      background-color: var(--ngp-destructive-background-active, #b91c1c);
+      background-color: color-mix(in oklab, var(--destructive) 84%, black);
     }
 
     :host[data-variant='outline'] {
       background-color: var(--surface);
       color: var(--primary);
-      border: 1px solid var(--border, #e2e8f0);
+      border: 1px solid var(--border);
       box-shadow: none;
     }
 
     :host[data-variant='outline'][data-hover] {
-      background-color: var(--ngp-background-hover);
-      border-color: var(--ngp-outline-border-hover, #cbd5e1);
+      background-color: var(--secondary-hover);
+      border-color: var(--border);
     }
 
     :host[data-variant='outline'][data-press] {
-      background-color: var(--ngp-outline-background-active, rgba(15, 23, 42, 0.1));
+      background-color: var(--secondary-active);
     }
 
     :host[data-variant='ghost'] {
@@ -171,7 +171,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'outline' 
 
     :host[data-variant='link'] {
       background-color: transparent;
-      color: var(--ngp-link-color, #3b82f6);
+      color: var(--primary);
       border: none;
       box-shadow: none;
       text-decoration: underline;

@@ -3,8 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '@/services/auth.service';
 import { User } from '@/models';
-import { ButtonComponent } from '@/components/ui/button.component';
-import { InputComponent } from '@/components/ui/input.component';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
+import { InputComponent } from '@/components/ui/primitives/input.component';
 
 @Component({
   selector: 'app-profile',

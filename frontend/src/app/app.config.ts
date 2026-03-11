@@ -4,11 +4,15 @@ import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import { provideNgIconsConfig } from '@ng-icons/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
+    provideNgIconsConfig({
+      size: '1.3em',
+    }),
   ],
 };

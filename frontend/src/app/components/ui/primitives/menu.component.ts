@@ -5,20 +5,18 @@ import { NgpMenu } from 'ng-primitives/menu';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-menu',
   hostDirectives: [NgpMenu],
-  template: `
-    <ng-content />
-  `,
+  template: ` <ng-content /> `,
   styles: `
-/* These styles rely on CSS variables that can be imported from ng-primitives/example-theme/index.css in your global styles */
-
     :host {
       position: fixed;
       display: flex;
       flex-direction: column;
       width: max-content;
-      background: var(--ngp-background);
-      border: 1px solid var(--ngp-border);
-      box-shadow: var(--ngp-shadow);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.08),
+        0 4px 6px -4px rgb(0 0 0 / 0.08);
       border-radius: 8px;
       padding: 4px;
       animation: menu-show 300ms ease-out;
