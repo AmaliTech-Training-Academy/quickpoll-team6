@@ -14,7 +14,8 @@ public class PollRequest {
     @Size(max = 255, message = "Question cannot exceed 255 characters")
     private String question;
     private String description;
-    @NotEmpty(message = "At least one option is required")
+    @NotNull
+    @Size(min = 2, message = "At least two options are required")
     private List<String> options;
     @NotNull(message = "Maximum selections must be specified")
     private Integer maxSelections;

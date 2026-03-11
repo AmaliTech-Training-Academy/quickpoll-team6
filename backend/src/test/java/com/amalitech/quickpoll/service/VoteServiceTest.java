@@ -129,13 +129,17 @@ class VoteServiceTest {
 
         User voter = new User();
         voter.setId(1L);
+        voter.setEmail("voter@example.com");
 
         Poll poll = new Poll();
         poll.setId(pollId);
         poll.setActive(true);
 
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.VOTED);
+
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
-        when(voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)).thenReturn(true);
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
 
         assertThrows(IllegalStateException.class, 
             () -> voteService.castVote(pollId, request, voter));
@@ -149,14 +153,18 @@ class VoteServiceTest {
 
         User voter = new User();
         voter.setId(1L);
+        voter.setEmail("voter@example.com");
 
         Poll poll = new Poll();
         poll.setId(pollId);
         poll.setActive(true);
         poll.setMaxSelections(2);
 
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
-        when(voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)).thenReturn(false);
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
 
         assertThrows(IllegalArgumentException.class, 
             () -> voteService.castVote(pollId, request, voter));
@@ -170,14 +178,18 @@ class VoteServiceTest {
 
         User voter = new User();
         voter.setId(1L);
+        voter.setEmail("voter@example.com");
 
         Poll poll = new Poll();
         poll.setId(pollId);
         poll.setActive(true);
         poll.setMaxSelections(3);
 
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
-        when(voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)).thenReturn(false);
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
         when(optionRepository.findAllById(request.getOptionIds())).thenReturn(List.of(new PollOption()));
 
         assertThrows(ResourceNotFoundException.class, 
@@ -192,6 +204,7 @@ class VoteServiceTest {
 
         User voter = new User();
         voter.setId(1L);
+        voter.setEmail("voter@example.com");
 
         Poll poll = new Poll();
         poll.setId(pollId);
@@ -205,8 +218,11 @@ class VoteServiceTest {
         option.setId(1L);
         option.setPoll(differentPoll);
 
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
-        when(voteRepository.existsByUserIdAndPollId(voter.getId(), pollId)).thenReturn(false);
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
         when(optionRepository.findAllById(request.getOptionIds())).thenReturn(List.of(option));
 
         assertThrows(IllegalArgumentException.class, 

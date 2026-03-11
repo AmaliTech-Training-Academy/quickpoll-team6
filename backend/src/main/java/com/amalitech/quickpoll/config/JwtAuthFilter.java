@@ -1,6 +1,5 @@
 package com.amalitech.quickpoll.config;
 
-import com.amalitech.quickpoll.model.enums.Role;
 import com.amalitech.quickpoll.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,8 +7,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
@@ -20,6 +21,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -31,7 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String path = request.getRequestURI();
-        if (path.startsWith("/api/auth/") || path.startsWith("/swagger-ui/") || path.startsWith("/api-docs/")) {
+        if (path.startsWith("/auth/") || path.startsWith("/swagger-ui/") || path.startsWith("/api-docs/") || path.startsWith("/v3/api-docs/") || path.startsWith("/actuator/") || path.startsWith("/departments")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -41,17 +43,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-        String token = authHeader.substring(7);
-        if (jwtService.isTokenValid(token)) {
+
+        try {
+            String token = authHeader.substring(7);
+            if (!jwtService.isTokenValid(token)) {
+                authenticationEntryPoint.commence(request, response, 
+                    new org.springframework.security.authentication.BadCredentialsException("Invalid or expired token"));
+                return;
+            }
+
             String email = jwtService.extractEmail(token);
-            userRepository.findByEmail(email).ifPresent(user -> {
-                var auth = new UsernamePasswordAuthenticationToken(
-                        user, null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-                );
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            });
+            userRepository.findByEmail(email).ifPresentOrElse(
+                user -> {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            user, null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                },
+                () -> {
+                    try {
+                        authenticationEntryPoint.commence(request, response,
+                            new org.springframework.security.authentication.BadCredentialsException("User not found"));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            );
+            filterChain.doFilter(request, response);
+        } catch (AuthenticationException e) {
+            authenticationEntryPoint.commence(request, response, e);
         }
-        filterChain.doFilter(request, response);
     }
 }
