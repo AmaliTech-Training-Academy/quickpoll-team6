@@ -31,16 +31,25 @@ def upsert_poll_summary(df: pd.DataFrame) -> None:
     records = df.to_dict("records")
     for r in records:
         r["last_updated"] = _now()
+        for field in ("created_at", "expires_at", "creator_id", "description"):
+            val = r.get(field)
+            if val is pd.NaT or (val is not None and pd.isna(val)):
+                r[field] = None
     stmt = insert(analytics_poll_summary).values(records)
     stmt = stmt.on_conflict_do_update(
         index_elements=["poll_id"],
         set_={
+            "creator_id": stmt.excluded.creator_id,
             "title": stmt.excluded.title,
+            "description": stmt.excluded.description,
             "creator_name": stmt.excluded.creator_name,
             "status": stmt.excluded.status,
+            "max_selections": stmt.excluded.max_selections,
+            "expires_at": stmt.excluded.expires_at,
             "total_votes": stmt.excluded.total_votes,
             "unique_voters": stmt.excluded.unique_voters,
             "participation_rate": stmt.excluded.participation_rate,
+            "created_at": stmt.excluded.created_at,
             "last_updated": stmt.excluded.last_updated,
         },
     )

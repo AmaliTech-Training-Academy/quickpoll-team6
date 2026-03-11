@@ -13,13 +13,24 @@ def compute_poll_summary(
     """
     Compute one summary row per poll.
 
-    Output columns: poll_id, title, creator_name, status,
-                    total_votes, unique_voters, participation_rate, created_at
+    Output columns: poll_id, creator_id, title, description, creator_name,
+                    status, max_selections, expires_at, total_votes,
+                    unique_voters, participation_rate, created_at
     """
     if polls_df.empty:
         return pd.DataFrame()
 
     result = polls_df.copy().rename(columns={"id": "poll_id"})
+
+    if "creator_id" not in result.columns:
+        result["creator_id"] = pd.NA
+    if "description" not in result.columns:
+        result["description"] = None
+    if "max_selections" not in result.columns:
+        result["max_selections"] = 1
+    if "expires_at" not in result.columns:
+        result["expires_at"] = pd.NaT
+
     result["status"] = result["active"].map({True: "ACTIVE", False: "CLOSED"})
 
     if not votes_df.empty:
@@ -42,9 +53,13 @@ def compute_poll_summary(
     return result[
         [
             "poll_id",
+            "creator_id",
             "title",
+            "description",
             "creator_name",
             "status",
+            "max_selections",
+            "expires_at",
             "total_votes",
             "unique_voters",
             "participation_rate",
@@ -126,7 +141,7 @@ def compute_user_participation(
             .agg(
                 total_votes_cast=("id", "count"),
                 polls_participated=("poll_id", "nunique"),
-                last_active=("created_at", "max"),
+                last_vote_at=("created_at", "max"),
             )
             .reset_index()
         )
@@ -134,21 +149,38 @@ def compute_user_participation(
     else:
         result["total_votes_cast"] = 0
         result["polls_participated"] = 0
-        result["last_active"] = pd.NaT
+        result["last_vote_at"] = pd.NaT
 
     if not polls_df.empty:
         polls_created = (
-            polls_df.groupby("creator_id").size().reset_index(name="polls_created")
+            polls_df.groupby("creator_id")
+            .agg(
+                polls_created=("id", "size"),
+                last_created_poll=("created_at", "max"),
+            )
+            .reset_index()
         )
         result = result.merge(
             polls_created, left_on="user_id", right_on="creator_id", how="left"
         )
     else:
         result["polls_created"] = 0
+        result["last_created_poll"] = pd.NaT
+
+    result = result.drop(columns=["creator_id"], errors="ignore")
 
     result["total_votes_cast"] = result["total_votes_cast"].fillna(0).astype(int)
     result["polls_participated"] = result["polls_participated"].fillna(0).astype(int)
     result["polls_created"] = result["polls_created"].fillna(0).astype(int)
+
+    activity_times = pd.concat(
+        [
+            pd.to_datetime(result["last_vote_at"], errors="coerce"),
+            pd.to_datetime(result["last_created_poll"], errors="coerce"),
+        ],
+        axis=1,
+    )
+    result["last_active"] = activity_times.max(axis=1)
 
     # Convert NaT → None so PostgreSQL receives NULL, not "NaT"
     result["last_active"] = result["last_active"].astype(object)

@@ -12,9 +12,12 @@ def polls_df() -> pd.DataFrame:
         {
             "id": [1, 2],
             "title": ["Best cloud?", "Favourite DB?"],
+            "description": ["Choose one cloud", "Choose one database"],
             "creator_name": ["Alice", "Bob"],
             "active": [True, False],
             "creator_id": [1, 2],
+            "max_selections": [1, 2],
+            "expires_at": pd.to_datetime(["2026-01-05", "2026-01-06"]),
             "created_at": pd.to_datetime(["2026-01-01", "2026-01-02"]),
         }
     )

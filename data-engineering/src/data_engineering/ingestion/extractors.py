@@ -30,7 +30,11 @@ def extract_polls(engine: Engine | None = None) -> pd.DataFrame:
     query = text("""
         SELECT p.id,
                COALESCE(to_jsonb(p)->>'title', to_jsonb(p)->>'question') AS title,
-               p.active, p.multi_select, p.expires_at,
+               p.description,
+               p.active,
+               p.expires_at,
+               COALESCE(NULLIF(to_jsonb(p)->>'max_selections', '')::INT, 1)
+                   AS max_selections,
                p.created_at, p.creator_id, u.full_name AS creator_name
         FROM polls p
         JOIN users u ON p.creator_id = u.id
@@ -89,7 +93,11 @@ def extract_poll_by_id(poll_id: int, engine: Engine | None = None) -> pd.DataFra
     query = text("""
         SELECT p.id,
                COALESCE(to_jsonb(p)->>'title', to_jsonb(p)->>'question') AS title,
-               p.active, p.multi_select, p.expires_at,
+               p.description,
+               p.active,
+               p.expires_at,
+               COALESCE(NULLIF(to_jsonb(p)->>'max_selections', '')::INT, 1)
+                   AS max_selections,
                p.created_at, p.creator_id, u.full_name AS creator_name
         FROM polls p
         JOIN users u ON p.creator_id = u.id
@@ -179,7 +187,11 @@ def extract_polls_since(since: datetime, engine: Engine | None = None) -> pd.Dat
     query = text("""
         SELECT p.id,
                COALESCE(to_jsonb(p)->>'title', to_jsonb(p)->>'question') AS title,
-               p.active, p.multi_select, p.expires_at,
+               p.description,
+               p.active,
+               p.expires_at,
+               COALESCE(NULLIF(to_jsonb(p)->>'max_selections', '')::INT, 1)
+                   AS max_selections,
                p.created_at, p.creator_id, u.full_name AS creator_name
         FROM polls p
         JOIN users u ON p.creator_id = u.id
@@ -226,7 +238,11 @@ def extract_polls_by_ids(
     query = text("""
         SELECT p.id,
                COALESCE(to_jsonb(p)->>'title', to_jsonb(p)->>'question') AS title,
-               p.active, p.multi_select, p.expires_at,
+               p.description,
+               p.active,
+               p.expires_at,
+               COALESCE(NULLIF(to_jsonb(p)->>'max_selections', '')::INT, 1)
+                   AS max_selections,
                p.created_at, p.creator_id, u.full_name AS creator_name
         FROM polls p
         JOIN users u ON p.creator_id = u.id
