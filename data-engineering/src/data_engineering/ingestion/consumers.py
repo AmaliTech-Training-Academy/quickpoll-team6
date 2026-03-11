@@ -1,4 +1,11 @@
-"""Kafka consumer factory and dead-letter queue writer."""
+"""DEPRECATED: Kafka consumer factory and dead-letter queue writer.
+
+The Kafka consumer is no longer used by the main pipeline. PostgreSQL trigger
+functions in schema_triggers.sql handle real-time analytics updates.
+This file is retained for reference and as a rollback path.
+
+See: docs/KAFKA_TO_TRIGGERS_MIGRATION.md
+"""
 
 from __future__ import annotations
 
