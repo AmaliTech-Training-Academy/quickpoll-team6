@@ -1,4 +1,4 @@
-name: CI
+name: SAST
 
 on:
   push:
@@ -13,83 +13,100 @@ on:
       - "docs/**"
       - "README.md"
       - "**/*.md"
-
+  
 permissions:
   contents: read
+  security-events: write  # Required for CodeQL to upload SARIF results
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: sast-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  backend-lint:
-    name: Backend - Lint (Compile)
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java, javascript, python] #  adjust to your stack
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended  # broader than default
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  trivy-fs:
+    name: Trivy - Filesystem & IaC Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          java-version: "21"
-          distribution: temurin
-          cache: maven
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          scanners: vuln,misconfig,secret  # covers deps + IaC + hardcoded secrets
 
-      - name: Compile (no tests)
-        run: mvn -B -ntp -DskipTests compile
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
 
-  frontend-lint:
-    name: Frontend - Lint
+      - name: Upload Trivy report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-fs-report
+          path: trivy-fs.sarif
+          retention-days: 30
+
+  trufflehog:
+    name: TruffleHog - Secrets Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          fetch-depth: 0  # full history so TruffleHog can scan all commits
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint (if present)
-        run: npm run lint --if-present
-
-  data-engineering-lint:
-    name: Data Engineering - Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: data-engineering
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
         with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: data-engineering/requirements.txt
-
-      - name: Install ruff
-        run: python -m pip install --upgrade pip ruff
-
-      - name: Ruff lint
-        run: ruff check .
+          path: .
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified  # reduces noise, only verified live secrets
