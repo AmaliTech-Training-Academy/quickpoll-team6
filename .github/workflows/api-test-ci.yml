@@ -5,7 +5,7 @@ on:
   push:
     branches: [ develop ]
   pull_request:
-    branches: [ develop, feature/auth-and-poll-tests ]
+    branches: [ develop, fix/api-ci ]
   workflow_dispatch:
 
 jobs:
@@ -15,6 +15,9 @@ jobs:
     permissions:
       # Needed for actions that may write workflow-related outputs/artifacts.
       contents: write
+    defaults:
+      run:
+        working-directory: qa/api-tests
       
     steps:
     - name: Checkout code
@@ -167,7 +170,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: allure-results
-        path: target/allure-results/
+        path: qa/api-tests/target/allure-results/
         retention-days: 30
       
     - name: Upload Surefire Reports
@@ -175,7 +178,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: surefire-reports
-        path: target/surefire-reports/
+        path: qa/api-tests/target/surefire-reports/
         retention-days: 30
 
   # Reporting job: builds/publishes Allure report even if tests fail (for visibility).
@@ -185,6 +188,9 @@ jobs:
     if: always()
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: qa/api-tests
       
     steps:
     - name: Checkout code
@@ -200,14 +206,14 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: allure-results
-        path: target/allure-results
+        path: qa/api-tests/target/allure-results
       
     # Checkout gh-pages to preserve history
     - name: Load test report history
       uses: actions/checkout@v4
       with:
         ref: gh-pages
-        path: gh-pages
+        path: qa/api-tests/gh-pages
       continue-on-error: true
       
     # Copy history for trends
@@ -263,14 +269,14 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: allure-report-final
+        publish_dir: qa/api-tests/allure-report-final
       
     - name: Upload Allure Report
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: allure-report
-        path: allure-report-final/
+        path: qa/api-tests/allure-report-final/
         retention-days: 30
 
   # Optional parity check: run the same test image in Docker to validate containerized execution.

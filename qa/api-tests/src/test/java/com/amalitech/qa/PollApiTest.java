@@ -2,14 +2,17 @@ package com.amalitech.qa;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.testng.annotations.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class PollApiTest {
     private String authToken;
 
-    @BeforeClass
+    @BeforeAll
     public void setup() {
         RestAssured.baseURI = "http://localhost:8080";
         authToken = given()
