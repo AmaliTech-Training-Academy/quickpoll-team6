@@ -22,4 +22,5 @@ public class RegisterRequest {
             message = "Password must be 8–72 characters and contain at least one uppercase letter, one lowercase letter, and one special character"
     )
     private String password;
+    private Long departmentId;
 }

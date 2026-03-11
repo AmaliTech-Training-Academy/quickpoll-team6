@@ -50,9 +50,9 @@ public class KafkaEventPublisher {
             poll.getId(),
             poll.getCreator().getId(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
+            poll.getTitle(),
             poll.getQuestion(),
-            poll.getQuestion(),
-            poll.isMultiSelect(),
+            poll.getMaxSelections() > 1,
             poll.getExpiresAt() != null ? poll.getExpiresAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER) : null,
             poll.isActive(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER)
@@ -69,9 +69,9 @@ public class KafkaEventPublisher {
             poll.getId(),
             poll.getCreator().getId(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
+            poll.getTitle(),
             poll.getQuestion(),
-            poll.getQuestion(),
-            poll.isMultiSelect(),
+            poll.getMaxSelections() > 1,
             poll.getExpiresAt() != null ? poll.getExpiresAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER) : null,
             poll.isActive(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER)

@@ -23,7 +23,7 @@ public class Poll {
     @Column(nullable = false)
     private String question;
     
-    @Column(length = 1000, nullable = true)
+    @Column(length = 1000)
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -39,8 +39,8 @@ public class Poll {
     @ToString.Exclude
     private List<PollInvite> invites = new ArrayList<>();
 
-    @Column(name = "multi_select")
-    private boolean multiSelect;
+    @Column(name = "max_selections", nullable = false)
+    private Integer maxSelections = 1;
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;

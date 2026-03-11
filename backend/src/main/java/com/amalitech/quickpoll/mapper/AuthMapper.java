@@ -3,9 +3,13 @@ package com.amalitech.quickpoll.mapper;
 import com.amalitech.quickpoll.dto.AuthResponse;
 import com.amalitech.quickpoll.dto.AuthServiceResponse;
 import com.amalitech.quickpoll.dto.RegisterRequest;
+import com.amalitech.quickpoll.dto.UserDepartmentResponse;
 import com.amalitech.quickpoll.model.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
+import java.util.List;
+
 
 @Mapper(componentModel = "spring")
 public interface AuthMapper {
@@ -17,7 +21,8 @@ public interface AuthMapper {
     @Mapping(target = "password", ignore = true)
     User toUser(RegisterRequest request);
 
-    AuthServiceResponse toAuthServiceResponse(String token, String refreshToken, String email, String name, String role);
+    AuthServiceResponse toAuthServiceResponse(String token, String refreshToken, String email, String name, String role, List<UserDepartmentResponse> departments);
 
+    @Mapping(target = "departments", source = "departments")
     AuthResponse toAuthResponse(AuthServiceResponse serviceResponse);
 }

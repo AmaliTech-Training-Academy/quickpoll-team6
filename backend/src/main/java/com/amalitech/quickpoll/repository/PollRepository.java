@@ -2,6 +2,7 @@ package com.amalitech.quickpoll.repository;
 
 import com.amalitech.quickpoll.model.Poll;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,12 +11,26 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
+import java.util.Optional;
 @Repository
 public interface PollRepository extends JpaRepository<Poll, Long> {
     Page<Poll> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator ORDER BY p.createdAt DESC")
+    List<Poll> findAllWithOptions();
+
+    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id = :id")
+    Optional<Poll> findByIdWithOptions(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id IN :ids")
+    List<Poll> findAllByIdInWithOptions(@Param("ids") List<Long> ids);
+
     List<Poll> findByCreatorIdOrderByCreatedAtDesc(Long creatorId);
-    
-    @Query("SELECT p FROM Poll p WHERE p.active = true AND p.expiresAt IS NOT NULL AND p.expiresAt <= :now")
-    List<Poll> findExpiredActivePolls(@Param("now") LocalDateTime now);
+
+    @Query("SELECT DISTINCT p FROM Poll p JOIN FETCH p.options JOIN FETCH p.creator JOIN p.invites i JOIN i.departmentMember dm WHERE dm.email = :email ORDER BY p.createdAt DESC")
+    Page<Poll> findEntitledPollsByEmail(@Param("email") String email, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE Poll p SET p.active = false WHERE p.active = true AND p.expiresAt <= :now")
+    int closeExpiredPolls(@Param("now") LocalDateTime now);
 }
