@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -41,6 +42,47 @@ class TestGeneratePolls:
         assert len(polls) == 3
         assert [p["id"] for p in polls] == [1000, 1001, 1002]
 
+    def test_zero_vote_polls_have_no_votes(self):
+        """QP-15: zero_vote polls get zero_votes=True; generate_votes skips them."""
+        user_ids = [1, 2, 3]
+        polls = sp.generate_polls(
+            count=2,
+            start_id=1,
+            user_ids=user_ids,
+            zero_vote_count=2,
+            expired_count=0,
+        )
+        zero_vote_polls = [p for p in polls if p.get("zero_votes")]
+        assert len(zero_vote_polls) == 2
+        _, votes = sp.generate_votes(
+            polls,
+            votes_per_poll=10,
+            start_vote_id=1,
+            start_option_id=1,
+            user_ids=user_ids,
+        )
+        zero_vote_poll_ids = {p["id"] for p in zero_vote_polls}
+        for v in votes:
+            assert v["poll_id"] not in zero_vote_poll_ids
+
+    def test_expired_polls_have_past_expires_at_and_inactive(self):
+        """QP-15: expired_count polls have expires_at in past and active=False."""
+        polls = sp.generate_polls(
+            count=0,
+            start_id=1,
+            user_ids=[1],
+            zero_vote_count=0,
+            expired_count=2,
+        )
+        assert len(polls) == 2
+        now = datetime.now(UTC)
+        for p in polls:
+            assert p["expired"] is True
+            assert p["active"] is False
+            # expires_at should be in the past
+            exp = datetime.fromisoformat(p["expires_at"].replace("Z", "+00:00"))
+            assert exp < now + timedelta(seconds=1)
+
     def test_options_range(self):
         """Each poll should have 3-5 options."""
         polls = sp.generate_polls(count=20, start_id=1, user_ids=[1])
@@ -70,6 +112,20 @@ class TestGeneratePolls:
         )
         for field in expected_fields:
             assert field in p, f"Missing field: {field}"
+
+    def test_zero_votes_and_expired_flags_present(self):
+        """QP-15: polls have zero_votes and expired flags."""
+        polls = sp.generate_polls(
+            count=1,
+            start_id=1,
+            user_ids=[1],
+            zero_vote_count=1,
+            expired_count=1,
+        )
+        assert len(polls) == 3
+        assert polls[0].get("zero_votes") is False and polls[0].get("expired") is False
+        assert polls[1].get("zero_votes") is True and polls[1].get("expired") is False
+        assert polls[2].get("zero_votes") is False and polls[2].get("expired") is True
 
 
 class TestGenerateVotes:
@@ -240,6 +296,8 @@ class TestValidateArgs:
         defaults = {
             "users": 8,
             "polls": 5,
+            "zero_vote_polls": 0,
+            "expired_polls": 0,
             "votes_per_poll": 10,
             "stream_delay": 0,
         }
@@ -256,6 +314,14 @@ class TestValidateArgs:
     def test_negative_polls_rejected(self):
         with pytest.raises(SystemExit, match="--polls must be >= 0"):
             sp._validate_args(self._make_args(polls=-1))
+
+    def test_negative_zero_vote_polls_rejected(self):
+        with pytest.raises(SystemExit, match="--zero-vote-polls must be >= 0"):
+            sp._validate_args(self._make_args(zero_vote_polls=-1))
+
+    def test_negative_expired_polls_rejected(self):
+        with pytest.raises(SystemExit, match="--expired-polls must be >= 0"):
+            sp._validate_args(self._make_args(expired_polls=-1))
 
     def test_negative_votes_per_poll_rejected(self):
         with pytest.raises(SystemExit, match="--votes-per-poll must be >= 0"):
