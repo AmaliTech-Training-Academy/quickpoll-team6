@@ -6,6 +6,7 @@ import com.amalitech.quickpoll.errorhandlers.UserNotFoundException;
 import com.amalitech.quickpoll.mapper.UserMapper;
 import com.amalitech.quickpoll.model.User;
 import com.amalitech.quickpoll.model.enums.Role;
+import com.amalitech.quickpoll.repository.DepartmentMemberRepository;
 import com.amalitech.quickpoll.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +29,9 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private DepartmentMemberRepository departmentMemberRepository;
 
     @InjectMocks
     private UserService userService;
@@ -45,6 +50,7 @@ class UserServiceTest {
         response.setName("Test User");
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
+        when(departmentMemberRepository.findAllByEmailWithDepartment(anyString())).thenReturn(List.of());
         when(userMapper.toProfileResponse(any(User.class))).thenReturn(response);
 
         UserProfileResponse result = userService.getUserProfile(1L);
@@ -73,6 +79,7 @@ class UserServiceTest {
         response.setId(1L);
         response.setEmail("test@example.com");
 
+        when(departmentMemberRepository.findAllByEmailWithDepartment(anyString())).thenReturn(List.of());
         when(userMapper.toProfileResponse(any(User.class))).thenReturn(response);
 
         UserProfileResponse result = userService.getCurrentUserProfile(user);
@@ -102,6 +109,7 @@ class UserServiceTest {
         response.setName("Updated Name");
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
+        when(departmentMemberRepository.findAllByEmailWithDepartment(anyString())).thenReturn(List.of());
         doNothing().when(userMapper).updateUserFromRequest(any(UserUpdateRequest.class), any(User.class));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
         when(userMapper.toProfileResponse(any(User.class))).thenReturn(response);
