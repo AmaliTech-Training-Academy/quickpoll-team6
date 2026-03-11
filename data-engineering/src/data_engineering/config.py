@@ -1,8 +1,8 @@
 """Pipeline configuration — reads from .env or environment variables.
 
 Environment modes (ENVIRONMENT env var):
-- local-dev: Local Postgres + Kafka (PLAINTEXT). Uses localhost defaults.
-- staging: Remote Postgres + Kafka (SASL_SSL). Requires DB_*, KAFKA_* vars.
+- local-dev: Local Postgres. Uses localhost defaults.
+- staging: Remote Postgres (RDS). Requires DB_* vars.
 """
 
 from __future__ import annotations
@@ -35,32 +35,39 @@ DATABASE_URL: str = (
     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
-# ── Kafka ─────────────────────────────────────────────────────────────────────
-if ENVIRONMENT == "staging":
-    KAFKA_BOOTSTRAP_SERVERS: str = config("KAFKA_BOOTSTRAP_SERVERS")
-    KAFKA_SASL_USERNAME: str = config("KAFKA_SASL_USERNAME")
-    KAFKA_SASL_PASSWORD: str = config("KAFKA_SASL_PASSWORD")
-    KAFKA_SASL_MECHANISM: str = config("KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256")
-    KAFKA_SSL_CAFILE: str = config("KAFKA_SSL_CAFILE", default="")
-else:
-    KAFKA_BOOTSTRAP_SERVERS = config(
-        "KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092"
-    )
-    KAFKA_SASL_USERNAME = ""
-    KAFKA_SASL_PASSWORD = ""
-    KAFKA_SASL_MECHANISM = config("KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256")
-    KAFKA_SSL_CAFILE = ""
+# ── Pipeline ──────────────────────────────────────────────────────────────────
+LOG_LEVEL: str = config("LOG_LEVEL", default="INFO")
+WATERMARK_OVERLAP_MINUTES: int = config(
+    "WATERMARK_OVERLAP_MINUTES", default=5, cast=int
+)
+FORCE_FULL_BACKFILL: bool = (
+    config("FORCE_FULL_BACKFILL", default="false", cast=str).lower() == "true"
+)
 
+# DEPRECATED: Kafka config — no longer used by the main pipeline.
+# Retained as stubs so the deprecated streaming.py / consumers.py modules
+# can still be imported without errors (enables clean rollback).
+# See: docs/KAFKA_TO_TRIGGERS_MIGRATION.md
+KAFKA_BOOTSTRAP_SERVERS: str = config(
+    "KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092"
+)
+KAFKA_SASL_USERNAME: str = config("KAFKA_SASL_USERNAME", default="")
+KAFKA_SASL_PASSWORD: str = config("KAFKA_SASL_PASSWORD", default="")
+KAFKA_SASL_MECHANISM: str = config("KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256")
+KAFKA_SSL_CAFILE: str = config("KAFKA_SSL_CAFILE", default="")
 KAFKA_TOPIC_VOTE_EVENTS: str = config("KAFKA_TOPIC_VOTE_EVENTS", default="vote_events")
 KAFKA_TOPIC_POLL_EVENTS: str = config("KAFKA_TOPIC_POLL_EVENTS", default="poll_events")
 KAFKA_GROUP_ID: str = config("KAFKA_GROUP_ID", default="quickpoll-analytics")
+BACKFILL_INTERVAL_MINUTES: int = config(
+    "BACKFILL_INTERVAL_MINUTES", default=30, cast=int
+)
 
 
 def get_kafka_security_config() -> dict[str, Any]:
-    """Return security-related kwargs for KafkaConsumer/KafkaProducer.
+    """DEPRECATED: Return security kwargs for KafkaConsumer/KafkaProducer.
 
-    When KAFKA_SASL_USERNAME is set, returns SASL_SSL config for remote Kafka
-    (e.g. Digital Ocean). Otherwise returns empty dict for local PLAINTEXT.
+    Kafka has been replaced by PostgreSQL triggers. This function is retained
+    so deprecated streaming.py/consumers.py remain importable for rollback.
     """
     if not KAFKA_SASL_USERNAME:
         return {}
@@ -74,18 +81,6 @@ def get_kafka_security_config() -> dict[str, Any]:
         out["ssl_cafile"] = KAFKA_SSL_CAFILE
     return out
 
-
-# ── Pipeline ──────────────────────────────────────────────────────────────────
-LOG_LEVEL: str = config("LOG_LEVEL", default="INFO")
-BACKFILL_INTERVAL_MINUTES: int = config(
-    "BACKFILL_INTERVAL_MINUTES", default=30, cast=int
-)
-WATERMARK_OVERLAP_MINUTES: int = config(
-    "WATERMARK_OVERLAP_MINUTES", default=5, cast=int
-)
-FORCE_FULL_BACKFILL: bool = (
-    config("FORCE_FULL_BACKFILL", default="false", cast=str).lower() == "true"
-)
 
 # ── Dead-Letter Queue ────────────────────────────────────────────────────────
 # local-dev: DLQ_DIR (folder). staging: R2 (bucket).
