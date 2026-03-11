@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/departments")
+@RequestMapping("/departments")
 @RequiredArgsConstructor
 @Tag(name = "Departments", description = "Department management endpoints")
 @SecurityRequirement(name = "Bearer Authentication")
@@ -32,7 +32,7 @@ public class DepartmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all departments", description = "Retrieve all departments with their members")
+    @Operation(summary = "Get all departments", description = "Retrieve all departments with their members", security = {})
     public ResponseEntity<List<DepartmentResponse>> getAllDepartments() {
         return ResponseEntity.ok(departmentService.getAllDepartments());
     }

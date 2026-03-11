@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "User authentication and registration endpoints")
 public class AuthController {
@@ -28,7 +28,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
-                .path("/api/auth/refresh")
+                .path("/auth/refresh")
                 .maxAge(REFRESH_TOKEN_MAX_AGE_SECONDS)
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
