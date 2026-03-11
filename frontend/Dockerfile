@@ -14,17 +14,13 @@ RUN npm run build
 # Runtime stage
 FROM nginx:alpine
 
-# Create non-root user
-RUN addgroup -g 1001 -S nginx && \
-    adduser -u 1001 -S nginx -G nginx
-
 # Copy built files
 COPY --from=build /app/dist/frontend /usr/share/nginx/html
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set proper permissions
+# Set proper permissions for existing nginx user
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
