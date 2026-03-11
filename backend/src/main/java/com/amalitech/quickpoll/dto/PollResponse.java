@@ -4,14 +4,16 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PollResponse {
     private Long id;
+    private String title;
     private String question;
     private String description;
     private String creatorName;
     private String status;
-    private boolean multipleChoice;
+    private Integer maxSelections;
+    private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
     private int totalVotes;
     private List<OptionResponse> options;
