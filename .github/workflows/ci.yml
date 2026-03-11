@@ -125,7 +125,7 @@ jobs:
 
       - name: Validate syntax
         working-directory: ./data-engineering
-        run: python -m py_compile etl_pipeline.py
+        run: python -m py_compile main.py
 
   # ──────────────────────────────────────────────────────────
   # Docker Compose — Integration smoke test
