@@ -12,7 +12,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B && \
     mv target/*.jar target/app.jar
 
-# Runtime stage
+# Runtime-stage
 FROM eclipse-temurin:21-jre-alpine
 
 # Create non-root user
