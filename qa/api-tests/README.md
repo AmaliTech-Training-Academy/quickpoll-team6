@@ -7,7 +7,6 @@ A comprehensive, maintainable API testing framework for the QuickPoll API built 
 - **Rest Assured Integration**: Leverages Rest Assured's powerful fluent API with RequestSpecification and ResponseSpecification
 - **JUnit 5**: Modern test execution framework with lifecycle hooks and annotations
 - **Allure Reporting**: Detailed test reports with automatic evidence capture
-- **Property-Based Testing**: Uses jqwik for comprehensive property validation
 - **Multi-Environment Support**: Easily switch between dev, staging, and production environments
 - **Automatic Cleanup**: Test data is automatically cleaned up after test execution
 - **Performance Monitoring**: Built-in response time tracking and threshold validation
