@@ -14,8 +14,14 @@ RUN npm run build
 # Runtime stage
 FROM nginx:alpine
 
-# Copy built files
-COPY --from=build /app/dist/frontend /usr/share/nginx/html
+# Copy built files (handle both /dist/frontend and /dist/frontend/browser)
+COPY --from=build /app/dist/frontend /tmp/frontend
+RUN rm -rf /usr/share/nginx/html/* && \
+    if [ -d /tmp/frontend/browser ]; then \
+      cp -r /tmp/frontend/browser/* /usr/share/nginx/html/; \
+    else \
+      cp -r /tmp/frontend/* /usr/share/nginx/html/; \
+    fi
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
