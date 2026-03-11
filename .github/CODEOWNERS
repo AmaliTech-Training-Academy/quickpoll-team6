@@ -14,10 +14,6 @@ Makefile @nabbi007
 /backend/src/main/java/ @basit-devBE
 /backend/pom.xml @basit-devBE
 
-# Frontend (Angular)
-/frontend/ @jdboachie
-/frontend/src/ @jdboachie
-/frontend/package.json @jdboachie
 
 # Data Engineering
 /data-engineering/ @henryantwi

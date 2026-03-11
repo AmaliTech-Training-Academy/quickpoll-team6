@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'http://localhost:8080/api';
+export const API_BASE_URL = 'http://quickpoll-staging-alb-265101781.eu-west-1.elb.amazonaws.com/api';
