@@ -331,7 +331,8 @@ jobs:
         run: npm ci --prefix frontend
 
       - name: TypeScript type check
-        run: npx --prefix frontend tsc --noEmit
+        working-directory: frontend
+        run: npx tsc --noEmit
 
   lint-data-engineering:
     name: Lint - Data Engineering (Ruff)
