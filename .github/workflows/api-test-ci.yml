@@ -44,6 +44,7 @@ jobs:
         id: maven_test
         run: mvn test
         # Keep pipeline moving so email/reporting still run.
+        #...
         continue-on-error: true
 
       - name: Test summary (readable logs)
