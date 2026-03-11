@@ -139,6 +139,8 @@ jobs:
             --no-cli-pager
 
       - name: Wait for backend to stabilize (max 10m)
+        continue-on-error: true
+        id: backend-wait
         run: |
           set -euo pipefail
           CLUSTER="quickpoll-${ENV}-cluster"
@@ -169,8 +171,11 @@ jobs:
             sleep "$INTERVAL"
           done
 
-      - name: Wait for frontend to stabilize (max 10m)
+      - name: Get backend container logs
+        if: always()
         run: |
+          echo "Fetching backend logs..."
+          aws logs tail "/ecs/quickpoll/${ENV}/backend" --since 15m --format short || echo "No logs available"
           set -euo pipefail
           CLUSTER="quickpoll-${ENV}-cluster"
           SERVICE="quickpoll-${ENV}-frontend"
