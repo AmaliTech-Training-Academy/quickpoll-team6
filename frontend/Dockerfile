@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # Runtime stage
-FROM nginx:alpine
+FROM nginx:1.25-alpine
 
 # Copy built files (handle both /dist/frontend and /dist/frontend/browser)
 COPY --from=build /app/dist/frontend /tmp/frontend
