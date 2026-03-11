@@ -4,6 +4,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   selector: 'app-poll-metrics',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
-  template: `poll metrics page`,
+  template: ``,
 })
 export class PollMetricsComponent {}
