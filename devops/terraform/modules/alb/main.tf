@@ -32,7 +32,7 @@ resource "aws_lb_target_group" "backend" {
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name        = "${var.project}-${var.environment}-frontend-tg"
+  name_prefix = "${var.project}-${var.environment}-fe-"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -48,6 +48,10 @@ resource "aws_lb_target_group" "frontend" {
   }
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-frontend-tg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ── Listeners ─────────────────────────────────────────────────────────────────
