@@ -36,11 +36,12 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(Arrays.asList(
-                            "http://localhost:4200",
-                            "http://localhost:3000",
-                            "http://0.0.0.0:4200",
-                            "http://localhost:8080"
-                    ));
+                        "http://localhost:4200",
+                        "http://localhost:3000",
+                        "http://0.0.0.0:4200",
+                        "http://localhost:8080",
+                        "https://nonmoral-zachariah-unindignant.ngrok-free.dev"
+                   ));
                     config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
                     config.setExposedHeaders(Arrays.asList("Authorization","Set-Cookie"));
