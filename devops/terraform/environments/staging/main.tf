@@ -154,7 +154,7 @@ module "ecs" {
       image          = "${module.ecr.repository_urls["frontend"]}:staging"
       cpu            = 256
       memory         = 512
-      container_port = 80
+      container_port = 8080
       desired_count  = 1
 
       enable_autoscaling = true
