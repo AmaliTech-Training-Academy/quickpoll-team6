@@ -139,8 +139,8 @@ jobs:
             --no-cli-pager
 
       - name: Wait for backend to stabilize (max 10m)
-        continue-on-error: true
         id: backend-wait
+        continue-on-error: true
         run: |
           set -euo pipefail
           CLUSTER="quickpoll-${ENV}-cluster"
@@ -163,19 +163,35 @@ jobs:
 
             if [[ $SECONDS -ge $END ]]; then
               echo "::error::backend did not stabilize within ${MAX_SECONDS}s"
-              aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:5].message" --output table || true
-              aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --output text || true
               exit 1
             fi
 
             sleep "$INTERVAL"
           done
 
-      - name: Get backend container logs
-        if: always()
+      - name: Backend debug on failure
+        if: steps.backend-wait.outcome == 'failure'
         run: |
-          echo "Fetching backend logs..."
-          aws logs tail "/ecs/quickpoll/${ENV}/backend" --since 15m --format short || echo "No logs available"
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/backend" --since 15m --format short || true
+          exit 1
+
+      - name: Wait for frontend to stabilize (max 10m)
+        id: frontend-wait
+        continue-on-error: true
+        if: steps.backend-wait.outcome == 'success'
+        run: |
           set -euo pipefail
           CLUSTER="quickpoll-${ENV}-cluster"
           SERVICE="quickpoll-${ENV}-frontend"
@@ -197,10 +213,31 @@ jobs:
 
             if [[ $SECONDS -ge $END ]]; then
               echo "::error::frontend did not stabilize within ${MAX_SECONDS}s"
-              aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:5].message" --output table || true
-              aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --output text || true
               exit 1
             fi
 
             sleep "$INTERVAL"
           done
+
+      - name: Frontend debug on failure
+        if: steps.frontend-wait.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || true
+          exit 1
+
+      - name: Get frontend container logs
+        if: always()
+        run: |
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || echo "No logs available"
