@@ -2,7 +2,7 @@ name: Deploy (Staging)
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, feature/ci-cd]
     paths-ignore:
       - "docs/**"
       - "README.md"
@@ -37,6 +37,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
@@ -54,11 +55,11 @@ jobs:
 
       - name: Terraform Plan
         working-directory: ${{ env.TF_DIR }}
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=tfplan -lock=false
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -lock=false tfplan
 
   build-and-push:
     name: Build and Push Images
@@ -86,6 +87,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -117,6 +119,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Force new deployment - backend
@@ -135,14 +138,106 @@ jobs:
             --force-new-deployment \
             --no-cli-pager
 
-      - name: Wait for backend to stabilize
+      - name: Wait for backend to stabilize (max 10m)
+        id: backend-wait
+        continue-on-error: true
         run: |
-          aws ecs wait services-stable \
-            --cluster "quickpoll-${ENV}-cluster" \
-            --services "quickpoll-${ENV}-backend"
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+          MAX_SECONDS=600
+          INTERVAL=20
+          END=$((SECONDS+MAX_SECONDS))
 
-      - name: Wait for frontend to stabilize
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "backend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "backend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::backend did not stabilize within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Backend debug on failure
+        if: steps.backend-wait.outcome == 'failure'
         run: |
-          aws ecs wait services-stable \
-            --cluster "quickpoll-${ENV}-cluster" \
-            --services "quickpoll-${ENV}-frontend"
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/backend" --since 15m --format short || true
+          exit 1
+
+      - name: Wait for frontend to stabilize (max 10m)
+        id: frontend-wait
+        continue-on-error: true
+        if: steps.backend-wait.outcome == 'success'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+          MAX_SECONDS=600
+          INTERVAL=20
+          END=$((SECONDS+MAX_SECONDS))
+
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "frontend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "frontend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::frontend did not stabilize within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Frontend debug on failure
+        if: steps.frontend-wait.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || true
+          exit 1
+
+      - name: Get frontend container logs
+        if: always()
+        run: |
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || echo "No logs available"

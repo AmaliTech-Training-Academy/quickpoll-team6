@@ -37,6 +37,7 @@ USERS = [
     (7, "eve@quickpoll.com", "Eve Adjei"),
 ]
 
+# (id, title, question, description, creator_id) — standard polls, expires +30d, active
 POLLS = [
     (4, "Cloud", "Favourite cloud provider?", "AWS / GCP / Azure", 1),
     (
@@ -48,6 +49,15 @@ POLLS = [
     ),
     (6, "Retro", "Sprint retrospective: overall mood?", "Rate the sprint", 2),
     (7, "Outing", "Next team outing venue?", "Where should we go?", 3),
+]
+
+# Edge-case polls (QP-15): (id, title, question, description, creator_id,
+# expires_days, active)
+# expires_days: positive = future, negative = past
+POLLS_EDGE = [
+    (8, "Unpopular", "Nobody voted yet?", "Zero-vote poll for testing", 1, 30, True),
+    (9, "Expired", "Old closed poll?", "Expired poll for testing", 2, -7, False),
+    (10, "Popular", "High participation poll?", "All users voted", 1, 30, True),
 ]
 
 OPTIONS = [
@@ -64,6 +74,15 @@ OPTIONS = [
     (22, 7, "Beach"),
     (23, 7, "Mountains"),
     (24, 7, "City tour"),
+    (25, 8, "Option A"),
+    (26, 8, "Option B"),
+    (27, 8, "Option C"),
+    (28, 9, "Yes"),
+    (29, 9, "No"),
+    (30, 9, "Maybe"),
+    (31, 10, "Choice 1"),
+    (32, 10, "Choice 2"),
+    (33, 10, "Choice 3"),
 ]
 
 DEPARTMENTS = [
@@ -100,6 +119,7 @@ POLL_INVITES = [
 ]
 
 # (vote_id, poll_id, option_id, user_id)
+# Poll 8: zero votes. Poll 9: expired. Poll 10: high participation (7 users)
 VOTES = [
     (6, 4, 12, 2),
     (7, 4, 13, 3),
@@ -117,6 +137,17 @@ VOTES = [
     (19, 7, 22, 5),
     (20, 7, 23, 6),
     (21, 7, 24, 7),
+    (22, 9, 28, 1),
+    (23, 9, 29, 2),
+    (24, 9, 30, 3),
+    (25, 9, 28, 4),
+    (26, 10, 31, 1),
+    (27, 10, 32, 2),
+    (28, 10, 33, 3),
+    (29, 10, 31, 4),
+    (30, 10, 32, 5),
+    (31, 10, 33, 6),
+    (32, 10, 31, 7),
 ]
 
 
@@ -124,12 +155,13 @@ def _validate_seed_references() -> None:
     """Fail fast if static seed rows are internally inconsistent."""
     user_ids = {u[0] for u in USERS}
     user_emails = {u[1] for u in USERS}
-    poll_ids = {p[0] for p in POLLS}
+    poll_ids = {p[0] for p in POLLS} | {p[0] for p in POLLS_EDGE}
     option_ids = {o[0] for o in OPTIONS}
     department_ids = {d[0] for d in DEPARTMENTS}
     department_member_ids = {dm[0] for dm in DEPARTMENT_MEMBERS}
 
-    missing_poll_creators = sorted({p[4] for p in POLLS} - user_ids)
+    all_polls = POLLS + [(p[0], p[1], p[2], p[3], p[4]) for p in POLLS_EDGE]
+    missing_poll_creators = sorted({p[4] for p in all_polls} - user_ids)
     if missing_poll_creators:
         raise ValueError(
             f"POLLS references unknown creator_id values: {missing_poll_creators}"
@@ -293,6 +325,39 @@ def seed() -> None:
             "Seeded polls: requested=%d inserted=%d",
             len(POLLS),
             max(polls_result.rowcount, 0),
+        )
+
+        # Edge-case polls with per-poll expires_at and active
+        edge_params = [
+            {
+                "id": p[0],
+                "title": p[1],
+                "question": p[2],
+                "desc": p[3],
+                "creator": p[4],
+                "expires_interval": f"{p[5]} days",
+                "active": p[6],
+            }
+            for p in POLLS_EDGE
+        ]
+        edge_result = conn.execute(
+            text("""
+            INSERT INTO polls (
+                id, title, question, description, creator_id, multi_select,
+                expires_at, active, created_at
+            )
+            VALUES (
+                :id, :title, :question, :desc, :creator, false,
+                NOW() + (:expires_interval::interval), :active, NOW()
+            )
+            ON CONFLICT (id) DO NOTHING
+        """),
+            edge_params,
+        )
+        logger.info(
+            "Seeded edge-case polls: requested=%d inserted=%d",
+            len(POLLS_EDGE),
+            max(edge_result.rowcount, 0),
         )
 
         options_result = conn.execute(

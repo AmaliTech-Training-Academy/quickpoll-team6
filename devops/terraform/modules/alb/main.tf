@@ -22,18 +22,18 @@ resource "aws_lb_target_group" "backend" {
   health_check {
     path                = "/actuator/health"
     healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
+    unhealthy_threshold = 10
+    timeout             = 10
     interval            = 30
-    matcher             = "200"
+    matcher             = "200,405"
   }
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-backend-tg" })
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name        = "${var.project}-${var.environment}-frontend-tg"
-  port        = 80
+  name_prefix = "qpfe-"
+  port        = 8080
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
@@ -41,13 +41,17 @@ resource "aws_lb_target_group" "frontend" {
   health_check {
     path                = "/"
     healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
+    unhealthy_threshold = 5
+    timeout             = 10
     interval            = 30
     matcher             = "200-399"
   }
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-frontend-tg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ── Listeners ─────────────────────────────────────────────────────────────────

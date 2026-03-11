@@ -234,10 +234,12 @@ Four scripts are available for populating the database with test data.
 
 ### Static Seed Data
 
-Creates 5 users, 4 polls, 13 options, and 16 votes. Idempotent (uses `ON CONFLICT DO NOTHING`).
+Creates 7 users, 10 polls (including edge cases), options, and votes. Idempotent (uses `ON CONFLICT DO NOTHING`). Includes zero-vote polls, expired polls, and high-participation polls for testing.
 
 ```powershell
 rav x seed
+# Or directly:
+uv run python scripts/seed_data.py
 ```
 
 ### AI-Generated Data
@@ -278,6 +280,9 @@ rav x mock-produce
 
 # Custom number of votes
 uv run python scripts/mock_producer.py --votes 20
+
+# Stress testing: high volume with reduced logging
+uv run python scripts/mock_producer.py --votes 1000 --quiet
 ```
 
 ### End-to-End Simulation (OLTP + Kafka)
@@ -299,6 +304,9 @@ uv run python scripts/seed_and_publish.py --stream-delay 2
 # OLTP only (no Kafka — useful when Kafka isn't running)
 uv run python scripts/seed_and_publish.py --no-kafka
 
+# Edge-case polls: zero votes and expired
+uv run python scripts/seed_and_publish.py --zero-vote-polls 2 --expired-polls 1
+
 # Reproducible runs
 uv run python scripts/seed_and_publish.py --seed 42
 ```
@@ -306,6 +314,8 @@ uv run python scripts/seed_and_publish.py --seed 42
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--polls N` | 5 | Number of polls to create |
+| `--zero-vote-polls N` | 0 | Number of polls with no votes (edge case) |
+| `--expired-polls N` | 0 | Number of polls with expires_at in past and active=False |
 | `--votes-per-poll N` | 10 | Max votes per poll (limited by user count) |
 | `--users N` | 8 | Number of new users in the pool |
 | `--stream-delay SEC` | 0 | Seconds between vote events (0 = batch) |
@@ -469,7 +479,7 @@ All commands use the [rav](https://github.com/jmitchel3/rav) task runner. Run fr
 
 | Command | Description |
 |---------|-------------|
-| `rav x seed` | Insert static test data (5 users, 4 polls, 16 votes) |
+| `rav x seed` | Insert static test data (7 users, 10 polls incl. edge cases) |
 | `rav x seed-ai --profile small` | Recommended AI seeding command |
 | `rav x seed-ai --profile small --chunks 10` | Same volume with smaller per-call payloads |
 | `rav x seed-ai --model llama-3.3-70b-versatile --fallback-model llama-3.3-70b-versatile` | Force robust primary/fallback model pair |

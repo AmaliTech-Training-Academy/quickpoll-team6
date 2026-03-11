@@ -128,7 +128,7 @@ module "ecs" {
 
   services = {
     backend = {
-      image          = "${module.ecr.repository_urls["backend"]}:${local.environment}"
+      image          = "${module.ecr.repository_urls["backend"]}:staging"
       cpu            = 512
       memory         = 1024
       container_port = 8080
@@ -142,18 +142,19 @@ module "ecs" {
 
       environment_vars = [
         { name = "SPRING_PROFILES_ACTIVE", value = "staging" },
-        { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
-        { name = "SPRING_DATASOURCE_PASSWORD", value = var.db_password },
+        { name = "DB_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
+        { name = "DB_USERNAME", value = var.db_username },
+        { name = "DB_PASSWORD", value = var.db_password },
         { name = "JWT_SECRET", value = var.jwt_secret },
+        { name = "KAFKA_BOOTSTRAP_SERVERS", value = "localhost:9092" },
       ]
     }
 
     frontend = {
-      image          = "${module.ecr.repository_urls["frontend"]}:${local.environment}"
+      image          = "${module.ecr.repository_urls["frontend"]}:staging"
       cpu            = 256
       memory         = 512
-      container_port = 80
+      container_port = 8080
       desired_count  = 1
 
       enable_autoscaling = true

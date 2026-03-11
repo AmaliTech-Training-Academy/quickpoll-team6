@@ -145,9 +145,11 @@ resource "aws_ecs_service" "services" {
     }
   }
 
-  # Prevent Terraform from reverting task definition changes made by CI/CD
+  health_check_grace_period_seconds = 120
+
+  # Allow task definition updates; only ignore desired count changes.
   lifecycle {
-    ignore_changes = [task_definition, desired_count]
+    ignore_changes = [desired_count]
   }
 
   depends_on = [aws_iam_role_policy_attachment.task_execution]

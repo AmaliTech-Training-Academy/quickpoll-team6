@@ -45,5 +45,15 @@ springdoc:
   api-docs:
     path: /api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: api/swagger-ui.html
     enabled: true
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health
+
+      endpoint:
+        health:
+          enabled=true:

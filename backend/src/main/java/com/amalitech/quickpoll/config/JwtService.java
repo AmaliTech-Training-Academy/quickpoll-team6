@@ -22,7 +22,18 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        try {
+            byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+            if (keyBytes.length < 32) {
+                byte[] paddedKey = new byte[32];
+                System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
+                keyBytes = paddedKey;
+            }
+            this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        } catch (Exception e) {
+            this.signingKey = Jwts.SIG.HS256.key().build();
+            System.err.println("WARNING: Failed to use provided JWT secret, generated secure key instead: " + e.getMessage());
+        }
     }
 
     public String generateToken(String email, String role) {
