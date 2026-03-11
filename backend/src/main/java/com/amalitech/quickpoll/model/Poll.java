@@ -18,9 +18,6 @@ public class Poll {
     private Long id;
 
     @Column(nullable = false)
-    private String title;
-
-    @Column(nullable = false)
     private String question;
     
     @Column(length = 1000)

@@ -25,7 +25,6 @@ import java.util.List;
 public class PollService {
     private final PollRepository pollRepository;
     private final PollOptionRepository optionRepository;
-    private final VoteRepository voteRepository;
     private final PollMapper pollMapper;
     private final PollOptionMapper pollOptionMapper;
     private final DepartmentRepository departmentRepository;
@@ -48,6 +47,7 @@ public class PollService {
 
     @Transactional
     public PollResponse createPoll(PollRequest request, User creator) {
+        log.info("Received poll creation request: {}", request.toString());
         if (request.getMaxSelections() < 1) {
             throw new IllegalArgumentException("Maximum selections must be at least 1");
         }
@@ -88,10 +88,7 @@ public class PollService {
         return toResponse(savedPoll);
     }
 
-    // TODO: Implement vote method
-    // public void vote(Long pollId, VoteRequest request, User voter) { ... }
-
-    public  PollResponse closePoll(Long pollId, User user) {
+    public PollResponse closePoll(Long pollId, User user) {
         Poll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
 
@@ -110,8 +107,6 @@ public class PollService {
         
         return toResponse(closedPoll);
     }
-
-
 
     public Boolean deletePoll(Long pollId, User user) {
         Poll poll = pollRepository.findById(pollId)
@@ -167,7 +162,6 @@ public class PollService {
 
         PollBasicResponse response = new PollBasicResponse();
         response.setId(poll.getId());
-        response.setTitle(poll.getTitle());
         response.setQuestion(poll.getQuestion());
         response.setDescription(poll.getDescription());
         response.setCreatorName(poll.getCreator().getFullName());

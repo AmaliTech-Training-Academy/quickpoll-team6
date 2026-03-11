@@ -1,5 +1,7 @@
 package com.amalitech.quickpoll.errorhandlers;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,6 +16,7 @@ import org.springframework.web.context.request.WebRequest;
 import java.time.LocalDateTime;
 
 @ControllerAdvice
+@Slf4j
 public class CustomExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -151,13 +154,34 @@ public class CustomExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, WebRequest request) {
+        log.error("Database constraint violation: {}", ex.getMessage(), ex);
+        
+        String rootCause = ex.getMostSpecificCause().getMessage();
+        if (rootCause != null && rootCause.contains("not-null constraint")) {
+            log.error("NOT NULL constraint violation. Database schema may be out of sync with application code.");
+        }
+        
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                ex.getMessage(),
+                "Unable to process request. Please try again later.",
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex, WebRequest request) {
+        log.error("Runtime exception occurred: {}", ex.getMessage(), ex);
+        
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "An unexpected error occurred. Please try again later.",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -165,11 +189,13 @@ public class CustomExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, WebRequest request) {
+        log.error("Unhandled exception occurred: {}", ex.getMessage(), ex);
+        
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                ex.getMessage(),
+                "An unexpected error occurred. Please contact support if this persists.",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);

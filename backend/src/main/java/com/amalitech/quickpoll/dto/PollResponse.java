@@ -7,7 +7,6 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PollResponse {
     private Long id;
-    private String title;
     private String question;
     private String description;
     private String creatorName;

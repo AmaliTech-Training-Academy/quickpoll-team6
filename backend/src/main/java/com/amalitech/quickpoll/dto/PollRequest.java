@@ -8,11 +8,8 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
 public class PollRequest {
-    @NotBlank(message = "Title is required")
-    @Size(max = 255, message = "Title cannot exceed 255 characters")
-    private String title;
     @NotBlank(message = "Question is required")
     @Size(max = 255, message = "Question cannot exceed 255 characters")
     private String question;

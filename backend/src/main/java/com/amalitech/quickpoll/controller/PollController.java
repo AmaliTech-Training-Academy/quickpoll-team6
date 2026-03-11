@@ -61,8 +61,6 @@ public class PollController {
         return ResponseEntity.ok(pollService.closePoll(id, user));
     }
 
-    // TODO: Add vote endpoint - POST /polls/{id}/vote
-    // TODO: Add close poll endpoint - PUT /polls/{id}/close
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete poll", description = "Delete a poll by its ID")
     public ResponseEntity<Void> deletePoll(@PathVariable Long id, @AuthenticationPrincipal User user) {

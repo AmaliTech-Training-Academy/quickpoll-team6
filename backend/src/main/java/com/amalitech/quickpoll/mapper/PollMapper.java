@@ -19,7 +19,6 @@ public interface PollMapper {
     PollResponse toResponse(Poll poll);
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "title", source = "request.title")
     @Mapping(target = "question", source = "request.question")
     @Mapping(target = "description", source = "request.description")
     @Mapping(target = "maxSelections", source = "request.maxSelections")

@@ -47,15 +47,18 @@ public class AuthService {
     User savedUser = userRepository.save(user);
     
     List<UserDepartmentResponse> departmentResponses = Collections.emptyList();
-    if (request.getDepartmentId() != null) {
-        Department department = departmentRepository.findById(request.getDepartmentId())
+    Long departmentId = request.getDepartmentId();
+    if (departmentId != null) {
+        Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found"));
         
         DepartmentMember member = DepartmentMember.builder()
                 .email(savedUser.getEmail())
                 .department(department)
                 .build();
-        departmentMemberRepository.save(member);
+        if (member != null) {
+            departmentMemberRepository.save(member);
+        }
         
         departmentResponses = getDepartmentResponses(savedUser.getEmail());
     }

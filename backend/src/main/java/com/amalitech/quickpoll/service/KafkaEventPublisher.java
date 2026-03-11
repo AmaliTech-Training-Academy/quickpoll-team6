@@ -30,53 +30,67 @@ public class KafkaEventPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleVoteCast(VoteCastDomainEvent domainEvent) {
         Vote vote = domainEvent.vote();
+        Long pollId = vote.getPoll().getId();
+        if (pollId == null) {
+            log.error("Cannot publish VOTE_CAST event: poll ID is null");
+            return;
+        }
         VoteCastEvent event = new VoteCastEvent(
             "VOTE_CAST",
             vote.getId(),
-            vote.getPoll().getId(),
+            pollId,
             vote.getOption().getId(),
             vote.getUser().getId(),
             vote.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER)
         );
-        kafkaTemplate.send(voteEventsTopic, String.valueOf(vote.getPoll().getId()), event);
-        log.info("Published VOTE_CAST event for vote_id={}, poll_id={}", vote.getId(), vote.getPoll().getId());
+        kafkaTemplate.send(voteEventsTopic, String.valueOf(pollId), event);
+        log.info("Published VOTE_CAST event for vote_id={}, poll_id={}", vote.getId(), pollId);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePollCreated(PollCreatedDomainEvent domainEvent) {
         Poll poll = domainEvent.poll();
+        Long pollId = poll.getId();
+        if (pollId == null) {
+            log.error("Cannot publish POLL_CREATED event: poll ID is null");
+            return;
+        }
         PollEvent event = new PollEvent(
             "POLL_CREATED",
-            poll.getId(),
+            pollId,
             poll.getCreator().getId(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
-            poll.getTitle(),
             poll.getQuestion(),
-            poll.getMaxSelections() > 1,
+            poll.getMaxSelections(),
             poll.getExpiresAt() != null ? poll.getExpiresAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER) : null,
             poll.isActive(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER)
         );
-        kafkaTemplate.send(pollEventsTopic, String.valueOf(poll.getId()), event);
-        log.info("Published POLL_CREATED event for poll_id={}", poll.getId());
+        String key = String.valueOf(pollId);
+        kafkaTemplate.send(pollEventsTopic, String.valueOf(pollId), event);
+        log.info("Published POLL_CREATED event for poll_id={}", pollId);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handlePollClosed(PollClosedDomainEvent domainEvent) {
         Poll poll = domainEvent.poll();
+        Long pollId = poll.getId();
+        if (pollId == null) {
+            log.error("Cannot publish POLL_CLOSED event: poll ID is null");
+            return;
+        }
         PollEvent event = new PollEvent(
             "POLL_CLOSED",
-            poll.getId(),
+            pollId,
             poll.getCreator().getId(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER),
-            poll.getTitle(),
             poll.getQuestion(),
-            poll.getMaxSelections() > 1,
+            poll.getMaxSelections(),
             poll.getExpiresAt() != null ? poll.getExpiresAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER) : null,
             poll.isActive(),
             poll.getCreatedAt().atOffset(ZoneOffset.UTC).format(ISO_FORMATTER)
         );
-        kafkaTemplate.send(pollEventsTopic, String.valueOf(poll.getId()), event);
-        log.info("Published POLL_CLOSED event for poll_id={}", poll.getId());
+        kafkaTemplate.send(pollEventsTopic, String.valueOf(pollId), event);
+        log.info("Published POLL_CLOSED event for poll_id={}", pollId);
     }
 }
