@@ -5,11 +5,14 @@ WORKDIR /app
 
 # Copy only pom.xml first for better layer caching
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Best-effort dependency warm-up to improve cache hit rate; don't fail build on transient network issues
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp -DskipTests dependency:go-offline || true
 
 # Copy source and build
 COPY src ./src
-RUN mvn clean package -DskipTests -B && \
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -ntp clean package -DskipTests && \
     mv target/*.jar target/app.jar
 
 # Runtime-stage
