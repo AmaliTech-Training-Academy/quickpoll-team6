@@ -13,7 +13,12 @@ import logging
 import time
 
 import pandas as pd
-from kafka.errors import CommitFailedError, NoBrokersAvailable
+
+try:
+    from kafka.errors import CommitFailedError, NoBrokersAvailable
+except ImportError:
+    CommitFailedError = Exception  # type: ignore[assignment,misc]
+    NoBrokersAvailable = Exception  # type: ignore[assignment,misc]
 
 from data_engineering.config import BACKFILL_INTERVAL_MINUTES
 from data_engineering.ingestion.consumers import create_consumer, write_to_dlq

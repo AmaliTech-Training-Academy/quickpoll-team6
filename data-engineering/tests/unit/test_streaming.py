@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+import pytest
 
-from kafka.errors import CommitFailedError, NoBrokersAvailable
+pytest.importorskip(
+    "kafka",
+    reason="kafka-python not installed; skipping deprecated Kafka streaming tests",
+)
+
+from unittest.mock import MagicMock, patch  # noqa: E402
+
+from kafka.errors import CommitFailedError, NoBrokersAvailable  # noqa: E402
 
 
 def test_run_streaming_retries_on_no_brokers():
