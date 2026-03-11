@@ -21,11 +21,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.11-slim-bookworm
 
 # postgresql-client: provides pg_isready for the Postgres readiness check in entrypoint.sh
-# netcat-openbsd:    provides nc for the Kafka port readiness check in entrypoint.sh
 RUN apt-get update && apt-get install -y --no-install-recommends \
         sudo \
         postgresql-client \
-        netcat-openbsd \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r appuser && useradd -r -g appuser -m -s /bin/bash appuser \
     && echo "appuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/appuser \
