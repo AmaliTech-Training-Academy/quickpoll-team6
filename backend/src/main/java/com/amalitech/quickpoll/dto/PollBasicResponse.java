@@ -5,16 +5,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
-public class PollResponse {
+public class PollBasicResponse {
     private Long id;
     private String title;
     private String question;
     private String description;
     private String creatorName;
-    private String status;
     private Integer maxSelections;
     private LocalDateTime expiresAt;
+    private String status;
     private LocalDateTime createdAt;
-    private int totalVotes;
-    private List<OptionResponse> options;
+    private List<OptionBasicResponse> options;
 }

@@ -2,6 +2,7 @@ package com.amalitech.quickpoll.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(name = "poll_options", indexes = {
@@ -19,8 +20,8 @@ public class PollOption {
     @Column(name = "option_text", nullable = false)
     private String optionText;
 
-    @Column(name = "vote_count")
-    private int voteCount = 0;
+    @Formula("(SELECT COUNT(*) FROM votes v WHERE v.option_id = id)")
+    private int voteCount;
 
     @Override
     public boolean equals(Object o) {
