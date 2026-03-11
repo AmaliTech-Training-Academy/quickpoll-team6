@@ -55,12 +55,8 @@ KAFKA_SASL_USERNAME: str = config("KAFKA_SASL_USERNAME", default="")
 KAFKA_SASL_PASSWORD: str = config("KAFKA_SASL_PASSWORD", default="")
 KAFKA_SASL_MECHANISM: str = config("KAFKA_SASL_MECHANISM", default="SCRAM-SHA-256")
 KAFKA_SSL_CAFILE: str = config("KAFKA_SSL_CAFILE", default="")
-KAFKA_TOPIC_VOTE_EVENTS: str = config(
-    "KAFKA_TOPIC_VOTE_EVENTS", default="vote_events"
-)
-KAFKA_TOPIC_POLL_EVENTS: str = config(
-    "KAFKA_TOPIC_POLL_EVENTS", default="poll_events"
-)
+KAFKA_TOPIC_VOTE_EVENTS: str = config("KAFKA_TOPIC_VOTE_EVENTS", default="vote_events")
+KAFKA_TOPIC_POLL_EVENTS: str = config("KAFKA_TOPIC_POLL_EVENTS", default="poll_events")
 KAFKA_GROUP_ID: str = config("KAFKA_GROUP_ID", default="quickpoll-analytics")
 BACKFILL_INTERVAL_MINUTES: int = config(
     "BACKFILL_INTERVAL_MINUTES", default=30, cast=int
@@ -84,6 +80,7 @@ def get_kafka_security_config() -> dict[str, Any]:
     if KAFKA_SSL_CAFILE:
         out["ssl_cafile"] = KAFKA_SSL_CAFILE
     return out
+
 
 # ── Dead-Letter Queue ────────────────────────────────────────────────────────
 # local-dev: DLQ_DIR (folder). staging: R2 (bucket).
