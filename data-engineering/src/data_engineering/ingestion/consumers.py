@@ -15,7 +15,10 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from kafka import KafkaConsumer
+try:
+    from kafka import KafkaConsumer
+except ImportError:
+    KafkaConsumer = None  # type: ignore[assignment,misc]
 from sqlalchemy import select
 
 from data_engineering.config import (
