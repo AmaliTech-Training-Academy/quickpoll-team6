@@ -77,17 +77,20 @@ jobs:
           ignore-unfixed: true
           exit-code: 0
           scanners: vuln,misconfig,secret
+          trivy-config: ''
+        env:
+          TRIVY_DB_REPOSITORY: 'ghcr.io/aquasecurity/trivy-db:2'
 
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-fs.sarif') != ''
         with:
           sarif_file: ${{ github.workspace }}/trivy-fs.sarif
           category: trivy-fs
 
       - name: Upload Trivy report as artifact
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('trivy-fs.sarif') != ''
         with:
           name: trivy-fs-report
           path: ${{ github.workspace }}/trivy-fs.sarif
