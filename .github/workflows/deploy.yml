@@ -108,11 +108,11 @@ jobs:
           docker push "$REGISTRY/$SERVICE:$SHA"
           docker push "$REGISTRY/$SERVICE:${ENV}"
 
-  run-data-engineering-task:
-    name: Run Data Engineering Bootstrap Task
+  deploy:
+    name: Deploy to ECS (${{ github.ref_name == 'main' && 'Production' || 'Staging' }})
     runs-on: ubuntu-latest
     needs: build-and-push
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Configure AWS credentials
@@ -221,11 +221,14 @@ jobs:
           LOG_GROUP="/ecs/quickpoll/${ENV}/data-engineering"
           aws logs tail "$LOG_GROUP" --since 20m --format short || echo "No logs available."
 
-  deploy:
-    name: Deploy to ECS (${{ github.ref_name == 'main' && 'Production' || 'Staging' }})
+  # ── Data Engineering Bootstrap Task ──────────────────────────────────────────
+  # Runs AFTER backend deploy because the backend must create OLTP tables
+  # (votes, polls, users, etc.) before triggers can be deployed against them.
+  run-data-engineering-task:
+    name: Run Data Engineering Bootstrap Task
     runs-on: ubuntu-latest
-    needs: run-data-engineering-task
-    timeout-minutes: 20
+    needs: deploy
+    timeout-minutes: 15
 
     steps:
       - name: Configure AWS credentials
