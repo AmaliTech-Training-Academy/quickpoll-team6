@@ -2,6 +2,7 @@ package com.amalitech.quickpoll.repository;
 
 import com.amalitech.quickpoll.model.Vote;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,10 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
     Page<Vote> findByUserIdWithDetails(@Param("userId") Long userId, Pageable pageable);
     List<Vote> findByPollId(Long pollId);
     Optional<Vote> findByUserIdAndPollId(Long userId, Long pollId);
+
+    @Modifying
+    @Query("DELETE FROM Vote v WHERE v.poll.id = :pollId")
+    void deleteByPollId(@Param("pollId") Long pollId);
     boolean existsByUserIdAndPollId(Long userId, Long pollId);
     int countByOptionId(Long optionId);
     

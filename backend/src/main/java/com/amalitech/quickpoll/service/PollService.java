@@ -31,6 +31,7 @@ public class PollService {
     private final PollOptionMapper pollOptionMapper;
     private final DepartmentRepository departmentRepository;
     private final PollInviteRepository pollInviteRepository;
+    private final VoteRepository voteRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public Page<PollResponse> getAllPolls(int page, int size) {
@@ -85,6 +86,10 @@ public class PollService {
         log.info("Received poll creation request: {}", request.toString());
         if (request.getMaxSelections() < 1) {
             throw new IllegalArgumentException("Maximum selections must be at least 1");
+        }
+        if (request.getMaxSelections() > request.getOptions().size()) {
+            throw new IllegalArgumentException(
+                    "Maximum selections cannot exceed the number of options (" + request.getOptions().size() + ")");
         }
 
         Poll poll = pollMapper.toEntity(request, creator);
@@ -144,6 +149,7 @@ public class PollService {
         return toResponse(closedPoll);
     }
 
+    @Transactional
     public Boolean deletePoll(Long pollId, User user) {
         Poll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
@@ -152,7 +158,11 @@ public class PollService {
             throw new AccessDeniedException("Only the creator or admin can delete this poll");
         }
 
-        pollRepository.delete(poll);
+        // Bulk deletes in FK order to avoid N+1 individual DELETE statements
+        voteRepository.deleteByPollId(pollId);       // votes → options FK
+        optionRepository.deleteByPollId(pollId);     // options → poll FK
+        pollInviteRepository.deleteByPollId(pollId); // invites → poll FK
+        pollRepository.deleteById(pollId);
         return true;
     }
 
