@@ -1,21 +1,46 @@
-import os
+from __future__ import annotations
+
 import sys
-
-# Add the pptx creator script directory to sys path
-SKILL_DIR = (
-    r"c:\Users\HenryNanaAntwi\Development"
-    r"\Phase 1 Capstone\quickpoll-team6"
-    r"\.agents\skills\amalitech-pptx-creator"
-)
-sys.path.insert(0, os.path.join(SKILL_DIR, "scripts"))
-
-from pptx_bcg_patterns import BCGSlideBuilder  # noqa: E402
+from importlib import import_module
+from pathlib import Path
+from typing import Any
 
 
-def generate_quickpoll_deck():
-    bcg = BCGSlideBuilder(
-        os.path.join(SKILL_DIR, "assets", "templates", "AmaliTech_Blank.pptx"),
-        os.path.join(SKILL_DIR, "assets", "brand_config.json"),
+def _skill_dir() -> Path:
+    return (
+        Path(__file__).resolve().parents[1]
+        / ".agents"
+        / "skills"
+        / "amalitech-pptx-creator"
+    )
+
+
+def _load_bcg_builder() -> Any:
+    scripts_dir = _skill_dir() / "scripts"
+    scripts_dir_str = str(scripts_dir)
+    if scripts_dir_str not in sys.path:
+        sys.path.insert(0, scripts_dir_str)
+    return import_module("pptx_bcg_patterns").BCGSlideBuilder
+
+
+def _icon_item(title: str, text: str, icon: str) -> dict[str, str]:
+    return {"title": title, "text": text, "icon": icon}
+
+
+def _text_item(text: str, highlights: list[str]) -> dict[str, object]:
+    return {"text": text, "highlights": highlights}
+
+
+def _heading_item(text: str) -> dict[str, str]:
+    return {"type": "heading", "text": text}
+
+
+def generate_quickpoll_deck() -> None:
+    skill_dir = _skill_dir()
+    bcg_slide_builder = _load_bcg_builder()
+    bcg = bcg_slide_builder(
+        skill_dir / "assets" / "templates" / "AmaliTech_Blank.pptx",
+        skill_dir / "assets" / "brand_config.json",
     )
 
     bcg.preload_icons(
@@ -36,214 +61,188 @@ def generate_quickpoll_deck():
         ]
     )
 
-    # 1. Title Slide
     bcg.add_title_slide(
-        "Group 6: QuickPoll", "Internal Polling & Voting Tool", "March 2026"
+        "Group 6: QuickPoll",
+        "Internal Polling & Voting Tool",
+        "March 2026",
     )
 
-    # 2. Business Context (Problem & Why it matters)
     bcg.add_scr_slide(
         title="QuickPoll: A lightweight tool for team decisions",
         situation=[
-            {
-                "text": (
-                    "Remote and distributed teams struggle to reach consensus quickly"
+            _text_item(
+                "Remote and distributed teams struggle to reach consensus quickly",
+                ["reach consensus quickly"],
+            ),
+            _text_item(
+                (
+                    "Existing communication tools lack structured, "
+                    "trackable polling features"
                 ),
-                "highlights": ["reach consensus quickly"],
-            },
-            {
-                "text": (
-                    "Existing communication tools lack"
-                    " structured, trackable polling features"
-                ),
-                "highlights": ["lack structured", "polling features"],
-            },
+                ["lack structured", "polling features"],
+            ),
         ],
         resolution=[
-            {"type": "heading", "text": "Who it Serves & Why it Matters"},
-            {
-                "text": "Serves project managers, scrum masters, and team members",
-                "highlights": ["project managers", "scrum masters"],
-            },
-            {
-                "text": (
-                    "Improves decision-making speed"
-                    " and transparency within organizations"
-                ),
-                "highlights": ["speed", "transparency"],
-            },
+            _heading_item("Who it Serves & Why it Matters"),
+            _text_item(
+                "Serves project managers, scrum masters, and team members",
+                ["project managers", "scrum masters"],
+            ),
+            _text_item(
+                "Improves decision-making speed and transparency within organizations",
+                ["speed", "transparency"],
+            ),
         ],
         callout=(
-            "Our MVP Goal: Implement a focused polling"
-            " tool with analytics and expiration constraints."
+            "Our MVP Goal: Implement a focused polling tool with analytics "
+            "and expiration constraints."
         ),
         source="Project Context & Requirements",
     )
 
-    # 3. Team & Roles
     bcg.add_icon_bullets_slide(
         title="Team Configuration & Roles",
         items=[
-            {
-                "title": "Jude Boachie (Frontend)",
-                "text": "Angular 19, Reactive Forms, and real-time Chart components",
-                "icon": "globe",
-            },
-            {
-                "title": "Abdul Basit (Backend)",
-                "text": "Java 17, Spring Boot, JWT Auth, Poll CRUD & Routing",
-                "icon": "server",
-            },
-            {
-                "title": "Henry Antwi (Data Eng)",
-                "text": "Python ETL, PostgreSQL Triggers & Real-time Analytics Setup",
-                "icon": "database",
-            },
-            {
-                "title": "Illiasu Abubakar (DevOps)",
-                "text": "Docker Compose, CI/CD, and AWS ECS Fargate Deployment",
-                "icon": "cloud",
-            },
-            {
-                "title": "Samuel Boakye (QA)",
-                "text": "Test Plans, REST Assured API tests, Selenium UI coverage",
-                "icon": "check",
-            },
+            _icon_item(
+                "Jude Boachie (Frontend)",
+                "Angular 19, Reactive Forms, and real-time Chart components",
+                "globe",
+            ),
+            _icon_item(
+                "Abdul Basit (Backend)",
+                "Java 17, Spring Boot, JWT Auth, Poll CRUD & Routing",
+                "server",
+            ),
+            _icon_item(
+                "Henry Antwi (Data Eng)",
+                "Python ETL, PostgreSQL Triggers & Real-time Analytics Setup",
+                "database",
+            ),
+            _icon_item(
+                "Illiasu Abubakar (DevOps)",
+                "Docker Compose, CI/CD, and AWS ECS Fargate Deployment",
+                "cloud",
+            ),
+            _icon_item(
+                "Samuel Boakye (QA)",
+                "Test Plans, REST Assured API tests, Selenium UI coverage",
+                "check",
+            ),
         ],
     )
 
-    # 4. Under the Hood: Architecture & Tech Stack
     bcg.add_icon_bullets_slide(
         title="Built on a modern, containerized technology stack",
         items=[
-            {
-                "title": "Frontend (Angular 19)",
-                "text": (
-                    "Standalone components, @if/@for"
-                    " syntax, and reactive state management"
+            _icon_item(
+                "Frontend (Angular 19)",
+                "Standalone components, @if/@for syntax, and reactive state management",
+                "globe",
+            ),
+            _icon_item(
+                "Backend (Spring Boot 3.2)",
+                (
+                    "Java 17 providing robust REST APIs, JPA, and secure JWT "
+                    "Authentication"
                 ),
-                "icon": "globe",
-            },
-            {
-                "title": "Backend (Spring Boot 3.2)",
-                "text": (
-                    "Java 17 providing robust REST APIs,"
-                    " JPA, and secure JWT Authentication"
+                "server",
+            ),
+            _icon_item(
+                "Data Architecture (AWS RDS)",
+                (
+                    "Pivoted to PostgreSQL trigger functions for near "
+                    "real-time KPI analytics"
                 ),
-                "icon": "server",
-            },
-            {
-                "title": "Data Architecture (AWS RDS)",
-                "text": (
-                    "Pivoted to PostgreSQL trigger"
-                    " functions for near real-time KPI analytics"
-                ),
-                "icon": "database",
-            },
-            {
-                "title": "Infrastructure (AWS Fargate)",
-                "text": (
-                    "Standalone ECS setup replacing always-on Kafka for cost/efficiency"
-                ),
-                "icon": "cloud",
-            },
+                "database",
+            ),
+            _icon_item(
+                "Infrastructure (AWS Fargate)",
+                "Standalone ECS setup replacing always-on Kafka for cost/efficiency",
+                "cloud",
+            ),
         ],
     )
 
-    # 5. Live Demo Placeholder
     bcg.add_section_slide(
-        "Live Demo", "Walkthrough of core functionality with real data"
+        "Live Demo",
+        "Walkthrough of core functionality with real data",
     )
 
-    # 6. Retrospective: Successes
     bcg.add_icon_bullets_slide(
         title="What went well during our sprint development",
         items=[
-            {
-                "title": "Team Cohesiveness",
-                "text": (
-                    "Clear division of roles with"
-                    " cross-functional support and regular standups"
+            _icon_item(
+                "Team Cohesiveness",
+                (
+                    "Clear division of roles with cross-functional support "
+                    "and regular standups"
                 ),
-                "icon": "team",
-            },
-            {
-                "title": "Architecture Pivot",
-                "text": (
-                    "Successfully simplified Data Eng."
-                    " by moving from Kafka to DB Triggers"
-                ),
-                "icon": "rocket",
-            },
-            {
-                "title": "Deployment Automation",
-                "text": (
-                    "AWS ECS Fargate & GitHub Actions pipelines streamlined deployments"
-                ),
-                "icon": "cloud",
-            },
+                "team",
+            ),
+            _icon_item(
+                "Architecture Pivot",
+                "Successfully simplified Data Eng. by moving from Kafka to DB Triggers",
+                "rocket",
+            ),
+            _icon_item(
+                "Deployment Automation",
+                "AWS ECS Fargate & GitHub Actions pipelines streamlined deployments",
+                "cloud",
+            ),
         ],
     )
 
-    # 7. Retrospective: Challenges & Learnings
     bcg.add_icon_bullets_slide(
         title="Navigating technical challenges and project constraints",
         items=[
-            {
-                "title": "Data Pipeline Complexity",
-                "text": (
-                    "Managing state and real-time syncing"
-                    " between OLTP and Analytics tables"
+            _icon_item(
+                "Data Pipeline Complexity",
+                (
+                    "Managing state and real-time syncing between OLTP and "
+                    "Analytics tables"
                 ),
-                "icon": "warning",
-            },
-            {
-                "title": "Angular 19 Adoption",
-                "text": (
-                    "Migrating to new @if/@for syntax"
-                    " and strict standalone component patterns"
+                "warning",
+            ),
+            _icon_item(
+                "Angular 19 Adoption",
+                (
+                    "Migrating to new @if/@for syntax and strict standalone "
+                    "component patterns"
                 ),
-                "icon": "lightbulb",
-            },
-            {
-                "title": "Environment Networking",
-                "text": (
-                    "Connecting standalone Fargate tasks"
-                    " securely to shared RDS instances"
-                ),
-                "icon": "target",
-            },
+                "lightbulb",
+            ),
+            _icon_item(
+                "Environment Networking",
+                "Connecting standalone Fargate tasks securely to shared RDS instances",
+                "target",
+            ),
         ],
     )
 
-    # 8. Retrospective: What we'd do differently
     bcg.add_icon_bullets_slide(
         title="Opportunities for future iteration and improvement",
         items=[
-            {
-                "title": "Earlier Integration",
-                "text": "Allocate more buffer time for API to UI integration testing",
-                "icon": "calendar",
-            },
-            {
-                "title": "Expanded Dashboard",
-                "text": (
-                    "Build deeper visual insights from the"
-                    " user_participation analytics table"
+            _icon_item(
+                "Earlier Integration",
+                "Allocate more buffer time for API to UI integration testing",
+                "calendar",
+            ),
+            _icon_item(
+                "Expanded Dashboard",
+                (
+                    "Build deeper visual insights from the "
+                    "user_participation analytics table"
                 ),
-                "icon": "chart",
-            },
-            {
-                "title": "Scheduled Reconciliation",
-                "text": (
-                    "Add EventBridge scheduled runs to verify trigger accuracy nightly"
-                ),
-                "icon": "database",
-            },
+                "chart",
+            ),
+            _icon_item(
+                "Scheduled Reconciliation",
+                "Add EventBridge scheduled runs to verify trigger accuracy nightly",
+                "database",
+            ),
         ],
     )
 
-    # 9. Q&A
     bcg.add_end_slide("Thank You! Questions?")
 
     bcg.save("QuickPoll_V2_Presentation.pptx")
