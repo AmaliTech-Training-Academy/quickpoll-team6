@@ -25,4 +25,8 @@ config/*.yaml
 __pycache__/
 *.pyc
 
+# Presentation build artifacts
+presentation/output/
+presentation/_pptx_stubs/
+
 .agents/

@@ -3,6 +3,8 @@
 | Document | Description |
 |---|---|
 | [USER_GUIDE.md](USER_GUIDE.md) | How to set up, run, configure, and troubleshoot the pipeline |
+| [BACKEND_DASHBOARD_IMPLEMENTATION_HANDOFF.md](BACKEND_DASHBOARD_IMPLEMENTATION_HANDOFF.md) | Current backend handoff for building dashboard and poll analytics endpoints from the trigger-backed OLAP tables |
+| [FRONTEND_DASHBOARD_ANGULAR_HANDOFF.md](FRONTEND_DASHBOARD_ANGULAR_HANDOFF.md) | Angular frontend handoff for consuming dashboard analytics endpoints and implementing the dashboard and poll metrics views |
 | [AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md](AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md) | Current-state AWS handoff for deploying the trigger-based data-engineering task on ECR/ECS Fargate with RDS access |
 | [REMOTE_DB_HANDOFF.md](REMOTE_DB_HANDOFF.md) | Shared remote PostgreSQL handoff for backend/frontend integration after local trigger validation |
 | [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md) | End-to-end pipeline design and implementation history |
