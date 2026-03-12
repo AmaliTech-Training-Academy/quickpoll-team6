@@ -83,16 +83,17 @@ resource "aws_security_group" "data_engineering" {
 }
 
 # -- DB Security Group (db-sg) -------------------------------------------------
+# IMPORTANT: description and inline ingress block are kept IDENTICAL to the
+# original config. Changing description or removing the inline ingress would
+# force Terraform to destroy and recreate the SG, which fails because the RDS
+# ENI cannot be detached without higher AWS permissions.
 resource "aws_security_group" "db" {
   name        = "${var.project}-${var.environment}-db-sg"
-  description = "RDS - allow PostgreSQL from app layer and data-engineering task"
+  description = "RDS - allow PostgreSQL from app layer only"
   vpc_id      = var.vpc_id
 
-  # Inline ingress kept from the original config: this rule already exists in
-  # AWS. Keeping it inline prevents Terraform from deleting and recreating it,
-  # which would cause an InvalidPermission.Duplicate error on apply.
   ingress {
-    description     = "PostgreSQL from ECS app tasks"
+    description     = "PostgreSQL from ECS tasks"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
@@ -109,9 +110,10 @@ resource "aws_security_group" "db" {
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-db-sg" })
 }
 
-# Separate rule for data-engineering (new -- was not in the original db-sg).
-# Using a separate resource avoids rebuilding the security group and is already
-# present in AWS state from the partial apply.
+# Add data-engineering access to RDS as a separate rule resource.
+# This is the only net-new rule -- the app-sg ingress above already exists.
+# Note: db_from_data_engineering was destroyed by the failed apply and will be
+# recreated cleanly on the next terraform apply.
 resource "aws_security_group_rule" "db_from_data_engineering" {
   type                     = "ingress"
   description              = "PostgreSQL from data-engineering Fargate task"
