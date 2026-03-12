@@ -58,6 +58,61 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform plan -out=tfplan -lock=false
 
+      - name: Stop data-engineering task (avoid SG delete hang)
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          FAMILY="quickpoll-${ENV}-data-engineering"
+          SG_NAME="quickpoll-${ENV}-data-engineering-sg"
+
+          TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --family "$FAMILY" \
+            --desired-status RUNNING \
+            --query "taskArns[]" \
+            --output text || true)
+
+          if [[ -n "${TASKS:-}" && "${TASKS}" != "None" ]]; then
+            echo "Stopping data-engineering tasks: $TASKS"
+            for T in $TASKS; do
+              aws ecs stop-task --cluster "$CLUSTER" --task "$T" --no-cli-pager || true
+            done
+            echo "Waiting for tasks to stop..."
+            aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks $TASKS || true
+          else
+            echo "No running data-engineering tasks."
+          fi
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$SG_NAME" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text || true)
+
+          if [[ -n "${SG_ID:-}" && "${SG_ID}" != "None" ]]; then
+            echo "Waiting for SG $SG_ID ENIs to detach..."
+            MAX_SECONDS=600
+            INTERVAL=15
+            END=$((SECONDS+MAX_SECONDS))
+            while true; do
+              ENIS=$(aws ec2 describe-network-interfaces \
+                --filters "Name=group-id,Values=$SG_ID" \
+                --query "NetworkInterfaces[*].NetworkInterfaceId" \
+                --output text || true)
+              if [[ -z "${ENIS:-}" || "${ENIS}" == "None" ]]; then
+                echo "SG $SG_ID has no attached ENIs."
+                break
+              fi
+              if [[ $SECONDS -ge $END ]]; then
+                echo "::error::SG $SG_ID still has attached ENIs after ${MAX_SECONDS}s: $ENIS"
+                exit 1
+              fi
+              echo "SG $SG_ID still attached to ENIs: $ENIS"
+              sleep "$INTERVAL"
+            done
+          else
+            echo "Data-engineering SG not found; skipping ENI wait."
+          fi
+
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve -lock=false tfplan
