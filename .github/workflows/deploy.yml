@@ -2,7 +2,7 @@ name: Deploy (Staging)
 
 on:
   push:
-    branches: [develop, feature/ci-cd]
+    branches: [develop, feature/infra]
     paths-ignore:
       - "docs/**"
       - "README.md"
@@ -107,10 +107,123 @@ jobs:
           docker push "$REGISTRY/$SERVICE:$SHA"
           docker push "$REGISTRY/$SERVICE:${ENV}"
 
+  run-data-engineering-task:
+    name: Run Data Engineering Bootstrap Task
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve network config from Terraform outputs
+        id: net
+        run: |
+          # Fetch the private app subnet IDs and data-engineering SG ID
+          # These are stored as SSM parameters by the deploy pipeline (terraform output).
+          # Fallback: read directly from AWS resource tags.
+          SUBNET_IDS=$(aws ec2 describe-subnets \
+            --filters \
+              "Name=tag:Project,Values=quickpoll" \
+              "Name=tag:Environment,Values=${ENV}" \
+              "Name=tag:Tier,Values=private-app" \
+            --query "Subnets[*].SubnetId" \
+            --output text | tr '\t' ',')
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters \
+              "Name=group-name,Values=quickpoll-${ENV}-data-engineering-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "sg_id=$SG_ID"           >> $GITHUB_OUTPUT
+
+      - name: Resolve task definition ARN
+        id: taskdef
+        run: |
+          ARN=$(aws ecs list-task-definitions \
+            --family-prefix "quickpoll-${ENV}-data-engineering" \
+            --sort DESC \
+            --query "taskDefinitionArns[0]" \
+            --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Run data-engineering Fargate task
+        id: run-task
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --task-definition "${{ steps.taskdef.outputs.arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={\
+              subnets=[${{ steps.net.outputs.subnet_ids }}],\
+              securityGroups=[${{ steps.net.outputs.sg_id }}],\
+              assignPublicIp=DISABLED}" \
+            --query "tasks[0].taskArn" \
+            --output text \
+            --no-cli-pager)
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+          echo "Launched data-engineering task: $TASK_ARN"
+
+      - name: Wait for task to complete
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          TASK_ARN="${{ steps.run-task.outputs.task_arn }}"
+          MAX_SECONDS=600
+          INTERVAL=15
+          END=$((SECONDS + MAX_SECONDS))
+
+          echo "Waiting for task $TASK_ARN to complete..."
+          while true; do
+            STATUS=$(aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks "$TASK_ARN" \
+              --query "tasks[0].lastStatus" \
+              --output text)
+
+            echo "Task status: $STATUS"
+
+            if [[ "$STATUS" == "STOPPED" ]]; then
+              EXIT_CODE=$(aws ecs describe-tasks \
+                --cluster "$CLUSTER" \
+                --tasks "$TASK_ARN" \
+                --query "tasks[0].containers[0].exitCode" \
+                --output text)
+              echo "Container exit code: $EXIT_CODE"
+              if [[ "$EXIT_CODE" != "0" ]]; then
+                echo "::error::data-engineering task failed with exit code $EXIT_CODE"
+                exit 1
+              fi
+              echo "data-engineering task completed successfully."
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::data-engineering task did not finish within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Tail CloudWatch logs on failure
+        if: failure()
+        run: |
+          LOG_GROUP="/ecs/quickpoll/${ENV}/data-engineering"
+          aws logs tail "$LOG_GROUP" --since 20m --format short || echo "No logs available."
+
   deploy:
     name: Deploy to ECS (Staging)
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: run-data-engineering-task
     timeout-minutes: 20
 
     steps:

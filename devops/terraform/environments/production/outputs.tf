@@ -21,3 +21,13 @@ output "nat_gateway_ips" {
   description = "Elastic IPs for NAT gateways — whitelist in SonarQube, etc."
   value       = module.vpc.nat_gateway_public_ips
 }
+
+output "data_engineering_task_definition_arn" {
+  description = "ARN of the data-engineering Fargate task definition — use with aws ecs run-task"
+  value       = module.ecs_task_data_engineering.task_definition_arn
+}
+
+output "data_engineering_log_group" {
+  description = "CloudWatch log group for the data-engineering bootstrap task"
+  value       = module.ecs_task_data_engineering.log_group_name
+}

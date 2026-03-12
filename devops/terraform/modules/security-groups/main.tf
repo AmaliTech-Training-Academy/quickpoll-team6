@@ -54,19 +54,39 @@ resource "aws_security_group" "app" {
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-app-sg" })
 }
 
+# ── Data Engineering Security Group ──────────────────────────────────────────
+# Dedicated SG for the data-engineering Fargate task.
+# No inbound needed — the task does not serve traffic.
+# Outbound: RDS (5432) + HTTPS (443) for ECR, CloudWatch, Secrets Manager.
+resource "aws_security_group" "data_engineering" {
+  name        = "${var.project}-${var.environment}-data-engineering-sg"
+  description = "Data Engineering Fargate task - outbound to RDS and AWS services only"
+  vpc_id      = var.vpc_id
+
+  egress {
+    description     = "PostgreSQL to RDS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.db.id]
+  }
+
+  egress {
+    description = "HTTPS to AWS services (ECR, CloudWatch, Secrets Manager)"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, { Name = "${var.project}-${var.environment}-data-engineering-sg" })
+}
+
 # ── DB Security Group (db-sg) ─────────────────────────────────────────────────
 resource "aws_security_group" "db" {
   name        = "${var.project}-${var.environment}-db-sg"
   description = "RDS - allow PostgreSQL from app layer only"
   vpc_id      = var.vpc_id
-
-  ingress {
-    description     = "PostgreSQL from ECS tasks"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.app.id]
-  }
 
   egress {
     from_port   = 0
@@ -76,4 +96,27 @@ resource "aws_security_group" "db" {
   }
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-db-sg" })
+}
+
+# ── RDS inbound rules — separate resources to avoid cycle ────────────────────
+# Allow inbound PostgreSQL from the backend/frontend ECS tasks (app-sg)
+resource "aws_security_group_rule" "db_from_app" {
+  type                     = "ingress"
+  description              = "PostgreSQL from ECS app tasks"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.db.id
+  source_security_group_id = aws_security_group.app.id
+}
+
+# Allow inbound PostgreSQL from the data-engineering Fargate task
+resource "aws_security_group_rule" "db_from_data_engineering" {
+  type                     = "ingress"
+  description              = "PostgreSQL from data-engineering Fargate task"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.db.id
+  source_security_group_id = aws_security_group.data_engineering.id
 }

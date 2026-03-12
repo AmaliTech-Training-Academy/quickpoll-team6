@@ -12,3 +12,8 @@ output "db_sg_id" {
   description = "Security group ID for RDS"
   value       = aws_security_group.db.id
 }
+
+output "data_engineering_sg_id" {
+  description = "Security group ID for the data-engineering Fargate task"
+  value       = aws_security_group.data_engineering.id
+}
