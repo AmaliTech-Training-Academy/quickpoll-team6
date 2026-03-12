@@ -8,6 +8,11 @@ on:
       - "README.md"
       - "**.md"
   workflow_dispatch:
+    inputs:
+      run_data_engineering:
+        description: "Run the data-engineering bootstrap task"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -307,6 +312,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     timeout-minutes: 15
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_data_engineering == 'true' }}
 
     steps:
       - name: Configure AWS credentials
