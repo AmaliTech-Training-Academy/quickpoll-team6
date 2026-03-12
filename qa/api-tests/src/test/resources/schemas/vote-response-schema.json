@@ -1,31 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Vote Response Schema",
-  "description": "JSON schema for validating vote response structure",
+  "description": "JSON schema for validating vote cast response structure (POST /votes/polls/{pollId})",
   "type": "object",
-  "required": ["pollId", "success", "message"],
+  "required": ["success", "message"],
   "properties": {
-    "pollId": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-      "description": "UUID format poll identifier"
-    },
     "success": {
       "type": "boolean",
-      "description": "Whether the vote was successful"
+      "description": "Whether the vote was successfully cast"
     },
     "message": {
       "type": "string",
       "minLength": 1,
-      "description": "Response message"
-    },
-    "updatedVotes": {
-      "type": "array",
-      "items": {
-        "type": "integer",
-        "minimum": 0
-      },
-      "description": "Updated vote counts after the vote"
+      "description": "Response message describing the result"
     }
   },
   "additionalProperties": false

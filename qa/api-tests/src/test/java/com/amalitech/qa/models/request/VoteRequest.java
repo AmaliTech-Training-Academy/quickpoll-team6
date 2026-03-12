@@ -1,56 +1,44 @@
 package com.amalitech.qa.models.request;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  * Request model for casting a vote on a poll.
+ * Used with POST /votes/polls/{pollId}
+ * 
+ * API Request Schema:
+ * {
+ *   "optionIds": [0]
+ * }
  * 
  * @author QuickPoll API Testing Framework
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class VoteRequest {
     
-    @NotNull(message = "Poll ID is required")
-    private String pollId;
-    
-    @NotNull(message = "Option index is required")
-    @Min(value = 0, message = "Option index must be non-negative")
-    private Integer optionIndex;
-    
-    @NotNull(message = "Voter ID is required")
-    private String voterId;
+    @NotNull(message = "Option IDs are required")
+    private List<Integer> optionIds;
     
     public VoteRequest() {
     }
     
-    public VoteRequest(String pollId, Integer optionIndex, String voterId) {
-        this.pollId = pollId;
-        this.optionIndex = optionIndex;
-        this.voterId = voterId;
+    public VoteRequest(List<Integer> optionIds) {
+        this.optionIds = optionIds;
     }
     
-    public String getPollId() {
-        return pollId;
+    /**
+     * Convenience constructor for single option vote.
+     */
+    public VoteRequest(Integer optionId) {
+        this.optionIds = List.of(optionId);
     }
     
-    public void setPollId(String pollId) {
-        this.pollId = pollId;
+    public List<Integer> getOptionIds() {
+        return optionIds;
     }
     
-    public Integer getOptionIndex() {
-        return optionIndex;
-    }
-    
-    public void setOptionIndex(Integer optionIndex) {
-        this.optionIndex = optionIndex;
-    }
-    
-    public String getVoterId() {
-        return voterId;
-    }
-    
-    public void setVoterId(String voterId) {
-        this.voterId = voterId;
+    public void setOptionIds(List<Integer> optionIds) {
+        this.optionIds = optionIds;
     }
 }

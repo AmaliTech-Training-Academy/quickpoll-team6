@@ -1,99 +1,41 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Paginated Poll Response Schema",
-  "description": "JSON schema for validating paginated poll list responses (Spring Data Page format)",
+  "title": "Paginated My Votes Response Schema",
+  "description": "JSON schema for validating paginated my-votes responses (Spring Data Page format)",
   "type": "object",
   "required": ["content", "pageable", "totalPages", "totalElements", "first", "last", "size", "number", "numberOfElements", "empty"],
   "properties": {
     "content": {
       "type": "array",
-      "description": "Array of poll objects",
+      "description": "Array of vote objects",
       "items": {
         "type": "object",
-        "required": ["id", "question", "creatorEmail", "creatorName", "status", "maxSelections", "expiresAt", "createdAt", "totalVotes", "invitedDepartments", "options"],
+        "required": ["voteId", "pollId", "pollQuestion", "optionId", "optionText", "votedAt"],
         "properties": {
-          "id": {
+          "voteId": {
             "type": "integer",
-            "description": "Poll identifier"
+            "description": "Unique identifier for the vote"
           },
-          "question": {
-            "type": "string",
-            "maxLength": 500,
-            "description": "The poll question"
-          },
-          "description": {
-            "type": ["string", "null"],
-            "description": "Poll description"
-          },
-          "creatorEmail": {
-            "type": "string",
-            "description": "Email of the poll creator"
-          },
-          "creatorName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Name of the poll creator"
-          },
-          "status": {
-            "type": "string",
-            "description": "Poll status (ACTIVE, CLOSED, etc.)"
-          },
-          "maxSelections": {
+          "pollId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Maximum number of options that can be selected"
+            "description": "ID of the poll"
           },
-          "expiresAt": {
+          "pollQuestion": {
+            "type": "string",
+            "description": "The poll question text"
+          },
+          "optionId": {
+            "type": "integer",
+            "description": "ID of the selected option"
+          },
+          "optionText": {
+            "type": "string",
+            "description": "Text of the selected option"
+          },
+          "votedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "ISO 8601 datetime when poll expires"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "ISO 8601 datetime when poll was created"
-          },
-          "totalVotes": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Total number of votes"
-          },
-          "invitedDepartments": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of invited department names"
-          },
-          "options": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": ["id", "text", "voteCount", "percentage"],
-              "properties": {
-                "id": { 
-                  "type": "integer",
-                  "description": "Option identifier"
-                },
-                "text": { 
-                  "type": "string",
-                  "description": "Option text"
-                },
-                "voteCount": { 
-                  "type": "integer",
-                  "minimum": 0,
-                  "description": "Number of votes for this option"
-                },
-                "percentage": { 
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 100,
-                  "description": "Percentage of total votes"
-                }
-              }
-            },
-            "description": "List of poll options with vote counts"
+            "description": "ISO 8601 datetime when vote was cast"
           }
         },
         "additionalProperties": true
@@ -111,7 +53,7 @@
         },
         "pageSize": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 0,
           "description": "Number of items per page"
         },
         "offset": {
@@ -162,7 +104,7 @@
     },
     "size": {
       "type": "integer",
-      "minimum": 1,
+      "minimum": 0,
       "description": "Page size"
     },
     "number": {

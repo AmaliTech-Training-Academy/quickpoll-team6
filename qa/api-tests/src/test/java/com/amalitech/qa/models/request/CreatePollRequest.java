@@ -9,17 +9,24 @@ import java.util.List;
  * Request model for creating a new poll.
  * Includes all required fields per API specification.
  * 
+ * API Request Schema:
+ * {
+ *   "question": "string",
+ *   "description": "string",
+ *   "options": ["string"],
+ *   "maxSelections": 0,
+ *   "anonymous": true,
+ *   "departmentIds": [0],
+ *   "expiresAt": "2026-03-12T15:10:21.643Z"
+ * }
+ * 
  * @author QuickPoll API Testing Framework
- * @version 1.0.0
+ * @version 2.0.0
  */
 public class CreatePollRequest {
     
-    @NotNull(message = "Title is required")
-    @Size(min = 1, max = 255, message = "Title must be between 1 and 255 characters")
-    private String title;
-    
     @NotNull(message = "Question is required")
-    @Size(min = 5, max = 255, message = "Question must be between 5 and 255 characters")
+    @Size(min = 5, max = 500, message = "Question must be between 5 and 500 characters")
     private String question;
     
     private String description;
@@ -48,7 +55,6 @@ public class CreatePollRequest {
      * Sets default values for new required fields.
      */
     public CreatePollRequest(String question, String description, List<String> options, Boolean multipleChoice) {
-        this.title = "Test Poll " + System.currentTimeMillis();
         this.question = question;
         this.description = description;
         this.options = options;
@@ -61,9 +67,8 @@ public class CreatePollRequest {
     /**
      * Full constructor with all required fields.
      */
-    public CreatePollRequest(String title, String question, String description, List<String> options,
+    public CreatePollRequest(String question, String description, List<String> options,
                            Integer maxSelections, Boolean anonymous, List<Integer> departmentIds, String expiresAt) {
-        this.title = title;
         this.question = question;
         this.description = description;
         this.options = options;
@@ -74,14 +79,6 @@ public class CreatePollRequest {
     }
     
     // Getters and setters
-    
-    public String getTitle() {
-        return title;
-    }
-    
-    public void setTitle(String title) {
-        this.title = title;
-    }
     
     public String getQuestion() {
         return question;

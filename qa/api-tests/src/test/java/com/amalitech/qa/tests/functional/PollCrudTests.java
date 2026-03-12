@@ -45,7 +45,6 @@ public class PollCrudTests extends BaseTest {
     public void testCreatePoll() {
         // Arrange
         Map<String, Object> pollData = new HashMap<>();
-        pollData.put("title", "Testing Framework Poll");
         pollData.put("question", "What is your favorite testing framework?");
         pollData.put("description", "A poll about testing frameworks");
         pollData.put("options", Arrays.asList("JUnit", "TestNG"));

@@ -3,25 +3,24 @@
   "title": "Poll Response Schema",
   "description": "JSON schema for validating poll response structure based on OpenAPI PollResponse",
   "type": "object",
-  "required": ["id", "title", "question", "creatorName", "status", "maxSelections", "expiresAt", "createdAt", "totalVotes", "options"],
+  "required": ["id", "question", "creatorEmail", "creatorName", "status", "maxSelections", "expiresAt", "createdAt", "totalVotes", "invitedDepartments", "options"],
   "properties": {
     "id": {
       "type": "integer",
       "description": "Poll identifier"
     },
-    "title": {
-      "type": "string",
-      "maxLength": 255,
-      "description": "The poll title"
-    },
     "question": {
       "type": "string",
-      "maxLength": 255,
+      "maxLength": 500,
       "description": "The poll question"
     },
     "description": {
       "type": ["string", "null"],
       "description": "Poll description (optional)"
+    },
+    "creatorEmail": {
+      "type": "string",
+      "description": "Email of the poll creator"
     },
     "creatorName": {
       "type": "string",
@@ -30,8 +29,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["ACTIVE", "CLOSED"],
-      "description": "Poll status"
+      "description": "Poll status (e.g., ACTIVE, CLOSED)"
     },
     "maxSelections": {
       "type": "integer",
@@ -52,6 +50,13 @@
       "type": "integer",
       "minimum": 0,
       "description": "Total number of votes across all options"
+    },
+    "invitedDepartments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of invited department names"
     },
     "options": {
       "type": "array",
