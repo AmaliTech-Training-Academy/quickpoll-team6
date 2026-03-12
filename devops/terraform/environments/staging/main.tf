@@ -168,3 +168,35 @@ module "ecs" {
 
   tags = local.common_tags
 }
+
+# ── Data Engineering Bootstrap Task ──────────────────────────────────────────
+# One-shot Fargate task: creates analytics tables, deploys triggers, runs
+# backfill, then exits. NOT a long-running service.
+# Triggered via: aws ecs run-task (called from deploy.yml or manually).
+module "ecs_task_data_engineering" {
+  source = "../../modules/ecs-task"
+
+  project     = local.project
+  environment = local.environment
+  aws_region  = var.aws_region
+  task_name   = "data-engineering"
+
+  image       = "${module.ecr.repository_urls["data-engineering"]}:staging"
+  db_password = var.db_password
+
+  environment_vars = [
+    { name = "ENVIRONMENT",               value = "staging" },
+    { name = "DB_HOST",                   value = module.rds.db_host },
+    { name = "DB_PORT",                   value = tostring(module.rds.db_port) },
+    { name = "DB_NAME",                   value = module.rds.db_name },
+    { name = "DB_USER",                   value = var.db_username },
+    { name = "LOG_LEVEL",                 value = "INFO" },
+    { name = "DLQ_DIR",                   value = "data/dlq" },
+    { name = "BACKFILL_INTERVAL_MINUTES", value = "30" },
+    { name = "WATERMARK_OVERLAP_MINUTES", value = "5" },
+    { name = "FORCE_FULL_BACKFILL",       value = "false" },
+  ]
+
+  log_retention_days = 14
+  tags               = local.common_tags
+}

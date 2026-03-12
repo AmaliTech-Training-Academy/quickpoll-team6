@@ -1,19 +1,25 @@
-name: Deploy (Staging)
+name: Deploy
 
 on:
   push:
-    branches: [develop, feature/ci-cd]
+    branches: [develop, feature/infra]
     paths-ignore:
       - "docs/**"
       - "README.md"
       - "**.md"
   workflow_dispatch:
+    inputs:
+      run_data_engineering:
+        description: "Run the data-engineering bootstrap task"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
 
 env:
   AWS_REGION: eu-west-1
+  # Staging only
   ENV: staging
   TF_DIR: devops/terraform/environments/staging
 
@@ -56,6 +62,61 @@ jobs:
       - name: Terraform Plan
         working-directory: ${{ env.TF_DIR }}
         run: terraform plan -out=tfplan -lock=false
+
+      - name: Stop data-engineering task (avoid SG delete hang)
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          FAMILY="quickpoll-${ENV}-data-engineering"
+          SG_NAME="quickpoll-${ENV}-data-engineering-sg"
+
+          TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --family "$FAMILY" \
+            --desired-status RUNNING \
+            --query "taskArns[]" \
+            --output text || true)
+
+          if [[ -n "${TASKS:-}" && "${TASKS}" != "None" ]]; then
+            echo "Stopping data-engineering tasks: $TASKS"
+            for T in $TASKS; do
+              aws ecs stop-task --cluster "$CLUSTER" --task "$T" --no-cli-pager || true
+            done
+            echo "Waiting for tasks to stop..."
+            aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks $TASKS || true
+          else
+            echo "No running data-engineering tasks."
+          fi
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$SG_NAME" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text || true)
+
+          if [[ -n "${SG_ID:-}" && "${SG_ID}" != "None" ]]; then
+            echo "Waiting for SG $SG_ID ENIs to detach..."
+            MAX_SECONDS=600
+            INTERVAL=15
+            END=$((SECONDS+MAX_SECONDS))
+            while true; do
+              ENIS=$(aws ec2 describe-network-interfaces \
+                --filters "Name=group-id,Values=$SG_ID" \
+                --query "NetworkInterfaces[*].NetworkInterfaceId" \
+                --output text || true)
+              if [[ -z "${ENIS:-}" || "${ENIS}" == "None" ]]; then
+                echo "SG $SG_ID has no attached ENIs."
+                break
+              fi
+              if [[ $SECONDS -ge $END ]]; then
+                echo "::error::SG $SG_ID still has attached ENIs after ${MAX_SECONDS}s: $ENIS"
+                exit 1
+              fi
+              echo "SG $SG_ID still attached to ENIs: $ENIS"
+              sleep "$INTERVAL"
+            done
+          else
+            echo "Data-engineering SG not found; skipping ENI wait."
+          fi
 
       - name: Terraform Apply
         working-directory: ${{ env.TF_DIR }}
@@ -108,7 +169,7 @@ jobs:
           docker push "$REGISTRY/$SERVICE:${ENV}"
 
   deploy:
-    name: Deploy to ECS (Staging)
+    name: Deploy to ECS (${{ github.ref_name == 'main' && 'Production' || 'Staging' }})
     runs-on: ubuntu-latest
     needs: build-and-push
     timeout-minutes: 20
@@ -241,3 +302,160 @@ jobs:
         if: always()
         run: |
           aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || echo "No logs available"
+
+  # ── Data Engineering Bootstrap Task ──────────────────────────────────────────
+  # Runs AFTER backend deploy because the backend must start and create its
+  # OLTP database tables (votes, polls, users, etc.) BEFORE the data engineering
+  # task can deploy triggers against those tables.
+  run-data-engineering-task:
+    name: Run Data Engineering Bootstrap Task
+    runs-on: ubuntu-latest
+    needs: deploy
+    timeout-minutes: 15
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_data_engineering == 'true' }}
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Wait for RDS to be available
+        run: |
+          set -euo pipefail
+          DB_ID="quickpoll-${ENV}-postgres"
+          echo "Waiting for RDS instance ${DB_ID} to be available..."
+          aws rds wait db-instance-available --db-instance-identifier "$DB_ID"
+          echo "RDS is available."
+
+      - name: Resolve network config from Terraform outputs
+        id: net
+        run: |
+          # Fetch the private app subnet IDs and data-engineering SG ID
+          # Fallback: read directly from AWS resource tags if SSM parameters aren't used
+          SUBNET_IDS=$(aws ec2 describe-subnets \
+            --filters \
+              "Name=tag:Project,Values=quickpoll" \
+              "Name=tag:Environment,Values=${ENV}" \
+              "Name=tag:Tier,Values=private-app" \
+            --query "Subnets[*].SubnetId" \
+            --output text | tr '\t' ',')
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters \
+              "Name=group-name,Values=quickpoll-${ENV}-data-engineering-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "sg_id=$SG_ID"           >> $GITHUB_OUTPUT
+
+      - name: Ensure DB allows data-engineering access
+        run: |
+          set -euo pipefail
+          DB_SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=quickpoll-${ENV}-db-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          DE_SG_ID="${{ steps.net.outputs.sg_id }}"
+
+          if [[ -z "${DB_SG_ID:-}" || "${DB_SG_ID}" == "None" || -z "${DE_SG_ID:-}" || "${DE_SG_ID}" == "None" ]]; then
+            echo "::error::Could not resolve DB SG or data-engineering SG (db=${DB_SG_ID:-}, de=${DE_SG_ID:-})."
+            exit 1
+          fi
+
+          RULE_OK=$(aws ec2 describe-security-groups \
+            --group-ids "$DB_SG_ID" \
+            --query "SecurityGroups[0].IpPermissions[?FromPort==\`5432\` && ToPort==\`5432\` && IpProtocol=='tcp'].UserIdGroupPairs[?GroupId=='${DE_SG_ID}'] | length(@)" \
+            --output text)
+
+          if [[ "${RULE_OK}" == "0" || "${RULE_OK}" == "None" ]]; then
+            echo "DB SG missing ingress from data-engineering SG. Adding rule..."
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$DB_SG_ID" \
+              --protocol tcp \
+              --port 5432 \
+              --source-group "$DE_SG_ID" \
+              --no-cli-pager
+          else
+            echo "DB SG already allows data-engineering access."
+          fi
+
+      - name: Resolve task definition ARN
+        id: taskdef
+        run: |
+          ARN=$(aws ecs list-task-definitions \
+            --family-prefix "quickpoll-${ENV}-data-engineering" \
+            --sort DESC \
+            --query "taskDefinitionArns[0]" \
+            --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Run data-engineering Fargate task
+        id: run-task
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --task-definition "${{ steps.taskdef.outputs.arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={\
+              subnets=[${{ steps.net.outputs.subnet_ids }}],\
+              securityGroups=[${{ steps.net.outputs.sg_id }}],\
+              assignPublicIp=DISABLED}" \
+            --query "tasks[0].taskArn" \
+            --output text \
+            --no-cli-pager)
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+          echo "Launched data-engineering task: $TASK_ARN"
+
+      - name: Wait for task to complete
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          TASK_ARN="${{ steps.run-task.outputs.task_arn }}"
+          MAX_SECONDS=600
+          INTERVAL=15
+          END=$((SECONDS + MAX_SECONDS))
+
+          echo "Waiting for task $TASK_ARN to complete..."
+          while true; do
+            STATUS=$(aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks "$TASK_ARN" \
+              --query "tasks[0].lastStatus" \
+              --output text)
+
+            echo "Task status: $STATUS"
+
+            if [[ "$STATUS" == "STOPPED" ]]; then
+              EXIT_CODE=$(aws ecs describe-tasks \
+                --cluster "$CLUSTER" \
+                --tasks "$TASK_ARN" \
+                --query "tasks[0].containers[0].exitCode" \
+                --output text)
+              echo "Container exit code: $EXIT_CODE"
+              if [[ "$EXIT_CODE" != "0" ]]; then
+                echo "::error::data-engineering task failed with exit code $EXIT_CODE"
+                exit 1
+              fi
+              echo "data-engineering task completed successfully."
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::data-engineering task did not finish within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Tail CloudWatch logs on failure
+        if: failure()
+        run: |
+          LOG_GROUP="/ecs/quickpoll/${ENV}/data-engineering"
+          aws logs tail "$LOG_GROUP" --since 20m --format short || echo "No logs available."
