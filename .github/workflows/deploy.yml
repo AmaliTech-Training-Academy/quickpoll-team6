@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [develop, feature/infra, main]
+    branches: [develop, feature/infra]
     paths-ignore:
       - "docs/**"
       - "README.md"
@@ -14,9 +14,9 @@ permissions:
 
 env:
   AWS_REGION: eu-west-1
-  # Set environment dynamically based on branch
-  ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
-  TF_DIR: ${{ github.ref_name == 'main' && 'devops/terraform/environments/production' || 'devops/terraform/environments/staging' }}
+  # Staging only
+  ENV: staging
+  TF_DIR: devops/terraform/environments/staging
 
 jobs:
   terraform:
