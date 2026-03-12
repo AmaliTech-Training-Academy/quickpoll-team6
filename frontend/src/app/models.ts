@@ -28,16 +28,16 @@ export interface DepartmentMember {
 
 export interface Poll {
   id: number;
-  title?: string | null;
   question: string;
-  description: string | null;
-  creator_id: number;
-  maxSelections?: number | null;
+  description: string;
+  creatorEmail: string;
+  maxSelections: number;
   anonymous: boolean;
-  departmentIds?: number[] | null;
-  expiresAt?: string | null;
-  active: boolean | null;
-  created_at: string | null;
+  departmentIds: number[];
+  expiresAt: string;
+  createdAt: string;
+  status: string;
+  options: PollOption[]
 }
 
 export interface PollOption {
@@ -82,4 +82,26 @@ export interface PollResult {
   createdAt: string;
   totalVotes: number;
   options: PollResultOption[];
+}
+
+export interface ClosePollOption {
+  id: number;
+  text: string;
+  voteCount: number;
+  percentage: number;
+}
+
+export interface ClosePollResponse {
+  id: number;
+  question: string;
+  description: string;
+  creatorEmail: string;
+  creatorName: string;
+  status: string;
+  maxSelections: number;
+  expiresAt: string;
+  createdAt: string;
+  totalVotes: number;
+  invitedDepartments: string[];
+  options: ClosePollOption[];
 }

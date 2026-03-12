@@ -54,14 +54,14 @@ export class UserAvatarComponent {
   protected readonly textClass = computed(() => {
     switch (this.size()) {
       case 'sm':
-        return 'text-sm';
+        return 'text-xs';
       case 'lg':
         return 'text-4xl';
       case 'xl':
         return 'text-7xl';
       case 'md':
       default:
-        return 'text-sm';
+        return 'text-xs';
     }
   });
 

@@ -6,16 +6,14 @@ import { map } from 'rxjs';
 
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { AuthService } from '@/services/auth.service';
-import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-department-indicator',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, NgIcon, AsyncPipe, RouterLink],
+  imports: [ButtonComponent, NgIcon, AsyncPipe],
   providers: [provideIcons({ hugeBuilding06 })],
   template: `
     <button
-      routerLink="/~/account/team"
       app-button
       variant="secondary"
       size="sm"

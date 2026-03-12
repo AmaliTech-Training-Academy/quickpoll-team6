@@ -1,34 +1,56 @@
 import { Observable } from 'rxjs';
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 
-import { PollResult } from '@/models';
+import { ClosePollResponse, Poll, PollResult } from '@/models';
 import { API_BASE_URL } from '@/constants';
+
+export interface CastVoteRequest {
+  optionIds: number[];
+}
+
+export interface CastVoteResponse {
+  success: boolean;
+  message: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class PollService {
-  private apiUrl = `${API_BASE_URL}/polls`;
-
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  private readonly pollsApiUrl = `${API_BASE_URL}/polls`;
+  private readonly votesApiUrl = `${API_BASE_URL}/votes`;
 
   getAll(page = 0, size = 10): Observable<any> {
-    return this.http.get(`${this.apiUrl}/my-polls?page=${page}&size=${size}`);
+    return this.http.get(`${this.pollsApiUrl}/my-polls?page=${page}&size=${size}`);
+  }
+
+  getUserCreatedPolls(page = 0, size = 10): Observable<Poll> {
+    return this.http.get<Poll>(`${this.pollsApiUrl}/my-created-polls?page=${page}&size=${size}`);
   }
 
   getById(id: number): Observable<any> {
-    return this.http.get(`${this.apiUrl}/${id}`);
+    return this.http.get(`${this.pollsApiUrl}/${id}`);
   }
 
   getResults(id: number): Observable<PollResult> {
-    return this.http.get<PollResult>(`${this.apiUrl}/${id}/results`);
+    return this.http.get<PollResult>(`${this.pollsApiUrl}/${id}/results`);
   }
 
   create(poll: any): Observable<any> {
-    return this.http.post(this.apiUrl, poll);
+    return this.http.post(this.pollsApiUrl, poll);
   }
 
-  // TODO: Implement vote method
-  // vote(pollId: number, optionIds: number[]): Observable<any> { ... }
+  castVote(pollId: number, optionIds: number[]): Observable<CastVoteResponse> {
+    return this.http.post<CastVoteResponse>(`${this.votesApiUrl}/polls/${pollId}`, {
+      optionIds,
+    });
+  }
 
-  // TODO: Implement close poll method
+  closePoll(id: number): Observable<ClosePollResponse> {
+    return this.http.put<ClosePollResponse>(`${this.pollsApiUrl}/${id}/close`, {});
+  }
+
+  deletePoll(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.pollsApiUrl}/${id}`);
+  }
 }
