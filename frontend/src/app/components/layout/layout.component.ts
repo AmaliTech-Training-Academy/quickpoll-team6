@@ -29,28 +29,11 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
   template: `
     <div class="flex flex-col min-h-screen mb-12">
       <div
-        class="border-b sticky top-0 bg-background/95 supports-backdrop-filter:bg-background/80 backdrop-blur"
+        class="border-b sticky top-0 z-10 bg-background/95 supports-backdrop-filter:bg-background/80 backdrop-blur"
       >
         <header class="p-3 pb-0 gap-3 w-full flex flex-col maxview-container">
           <div class="flex items-center justify-between gap-3 p-1">
-            <div>
-              <svg
-                width="512"
-                height="512"
-                viewBox="0 0 512 512"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect width="512" height="512" rx="24" fill="#36AB90" />
-
-                <rect x="78" y="127" width="96" height="340" rx="16" fill="#A2F0E1" />
-
-                <rect x="208" y="246" width="96" height="221" rx="16" fill="#D9FCF5" />
-
-                <rect x="338" y="96" width="96" height="371" rx="16" fill="#93DFD0" />
-              </svg>
-              <app-department-indicator />
-            </div>
+            <app-department-indicator />
             <div class="flex items-center gap-2">
               <app-user-menu />
             </div>

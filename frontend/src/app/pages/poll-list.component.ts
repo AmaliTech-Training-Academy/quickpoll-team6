@@ -138,7 +138,7 @@ export class PollListComponent implements OnInit {
     this.filteredPolls = this.polls.filter((poll) => {
       switch (this.currentFilter) {
         case 'active':
-          return poll.active === true;
+          return poll.status === 'ACTIVE';
         case 'department':
           return this.isInMyDepartment(poll);
         case 'me':

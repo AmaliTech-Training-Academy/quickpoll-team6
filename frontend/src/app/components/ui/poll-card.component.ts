@@ -13,8 +13,7 @@ type PollOption = {
 };
 
 type Poll = {
-  // TODO
-  id: string | number;
+  id: number;
   question: string;
   description?: string | null;
   creatorName?: string | null;
@@ -55,12 +54,12 @@ type Poll = {
             <p class="mt-1 text-sm text-muted-foreground">{{ poll().description }}</p>
           }
 
-          <div class="mt-2 flex flex-wrap items-center gap-2">
+          <div class="mt-3 flex flex-wrap items-center gap-2">
             <p class="text-xs text-muted-foreground">
               by {{ creatorLabel() }} &bull; {{ totalVotesLabel() }} votes
             </p>
 
-            <span
+            <!-- <span
               class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none"
               [class.border-border]="!isDepartmentAudience()"
               [class.text-muted-foreground]="!isDepartmentAudience()"
@@ -70,7 +69,7 @@ type Poll = {
               [class.bg-primary/5]="isDepartmentAudience()"
             >
               {{ audienceLabel() }}
-            </span>
+            </span> -->
           </div>
         </div>
 
@@ -110,14 +109,14 @@ type Poll = {
           >
             <div class="mb-2 flex items-center justify-between gap-3 text-xs">
               <span class="text-foreground">{{ optionLabel(opt) }}</span>
-              <span class="text-muted-foreground">{{ opt.percentage | number: '1.0-1' }}%</span>
+              <!-- <span class="text-muted-foreground">{{ opt.percentage | number: '1.0-1' }}%</span> -->
             </div>
-            <div class="h-2 overflow-hidden rounded-full bg-muted">
+            <!-- <div class="h-2 overflow-hidden rounded-full bg-muted">
               <div
                 class="h-full rounded-full bg-primary transition-all"
                 [style.width.%]="opt.percentage"
               ></div>
-            </div>
+            </div> -->
           </li>
         }
       </ul>
@@ -128,17 +127,9 @@ export class PollCardComponent {
   readonly poll = input.required<Poll>();
 
   protected readonly departmentName = computed(() => {
-    const poll = this.poll();
+    // const poll = this.poll();
 
-    if (typeof poll.department === 'object' && poll.department) {
-      return poll.department.name?.trim() || null;
-    }
-
-    if (typeof poll.department === 'string') {
-      return poll.department.trim() || null;
-    }
-
-    return poll.departmentName?.trim() || poll.department_name?.trim() || null;
+    return ""
   });
 
   protected readonly hasDepartmentId = computed(() => {
@@ -166,12 +157,12 @@ export class PollCardComponent {
       return 'Department';
     }
 
-    return 'Company-wide';
+    return 'Company';
   });
 
   protected readonly creatorLabel = computed(() => {
     const poll = this.poll();
-    return poll.creatorName || poll.creator_name || 'Unknown';
+    return poll.creatorName;
   });
 
   protected readonly totalVotesLabel = computed(() => {
@@ -180,6 +171,6 @@ export class PollCardComponent {
   });
 
   protected optionLabel(option: PollOption): string {
-    return option.text ?? option.option_text ?? '';
+    return option.text ?? '';
   }
 }

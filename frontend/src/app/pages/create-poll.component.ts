@@ -191,7 +191,7 @@ type PollAudience = 'company-wide' | 'department';
                       [value]="getOptions()[i]"
                       (input)="updateOption(i, $event)"
                       placeholder="Enter option title"
-                      class="flex-1 rounded-md!"
+                      class="flex-1 rounded!"
                       required
                       [attr.data-test-id]="'create-poll-option-input-' + i"
                     />

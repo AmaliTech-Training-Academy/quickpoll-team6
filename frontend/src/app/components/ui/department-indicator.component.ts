@@ -14,7 +14,14 @@ import { RouterLink } from '@angular/router';
   imports: [ButtonComponent, NgIcon, AsyncPipe, RouterLink],
   providers: [provideIcons({ hugeBuilding06 })],
   template: `
-    <button routerLink="/~/account/team" app-button variant="outline" size="sm" type="button" class="font-normal!">
+    <button
+      routerLink="/~/account/team"
+      app-button
+      variant="secondary"
+      size="sm"
+      type="button"
+      class="font-normal! rounded-full! text-xs!"
+    >
       <ng-icon name="hugeBuilding06" />
       {{ departmentLabel$ | async }}
     </button>
