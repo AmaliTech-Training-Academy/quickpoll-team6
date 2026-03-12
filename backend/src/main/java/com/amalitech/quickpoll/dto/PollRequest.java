@@ -16,6 +16,7 @@ public class PollRequest {
     private String description;
     @NotNull
     @Size(min = 2, message = "At least two options are required")
+    @Size(max=10, message = "Maximum of 10 options allowed")
     private List<String> options;
     @NotNull(message = "Maximum selections must be specified")
     private Integer maxSelections;

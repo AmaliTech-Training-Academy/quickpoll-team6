@@ -61,7 +61,7 @@ public class PollController {
     public ResponseEntity<PollResponse> createPoll(
             @Valid @RequestBody PollRequest request,
             @AuthenticationPrincipal User creator) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(pollService.createPoll(request, creator));
+        return ResponseEntity.ok(pollService.createPoll(request, creator));
     }
 
     @PutMapping("/{id}/close")
