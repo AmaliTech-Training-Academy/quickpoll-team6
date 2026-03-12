@@ -1,0 +1,393 @@
+# ──────────────────────────────────────────────────────────────
+# QuickPoll — QA Test Automation
+# ──────────────────────────────────────────────────────────────
+# Runs API tests (REST Assured) and UI tests (Selenium) against
+# a live Docker Compose stack. Generates Allure reports and
+# publishes to GitHub Pages.
+#
+# Required secrets:
+#   SLACK_WEBHOOK_URL   — Slack incoming webhook for notifications
+#   SMTP_SERVER / PORT / USERNAME / PASSWORD / EMAIL_TO — email
+#
+# Required variables:
+#   SEND_EMAIL          — set to 'true' to enable email reports
+# ──────────────────────────────────────────────────────────────
+
+name: QA
+
+on:
+  workflow_dispatch: # disabled until staging is stable — re-enable by adding push/pull_request triggers
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────
+  # API Tests — REST Assured against live backend
+  # ──────────────────────────────────────────────────────────
+
+  api-tests:
+    name: API Tests — REST Assured
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start application stack
+        run: |
+          docker compose up -d
+          echo "Waiting for backend to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "Backend is healthy."
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Backend did not start in time."
+              docker compose logs backend
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Build test project
+        working-directory: ./qa/api-tests
+        run: mvn clean compile -B
+
+      - name: Run API tests
+        working-directory: ./qa/api-tests
+        run: mvn test -B
+        continue-on-error: true
+
+      - name: Test summary
+        if: always()
+        working-directory: ./qa/api-tests
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET, sys, re
+
+          files = glob.glob("target/surefire-reports/TEST-*.xml")
+          total = failed = errors = skipped = 0
+          failed_tests = []
+
+          if not files:
+              print("No Surefire XML reports found.")
+              sys.exit(1)
+
+          for f in files:
+              root = ET.parse(f).getroot()
+              total   += int(root.attrib.get("tests", 0))
+              failed  += int(root.attrib.get("failures", 0))
+              errors  += int(root.attrib.get("errors", 0))
+              skipped += int(root.attrib.get("skipped", 0))
+              for tc in root.findall("testcase"):
+                  name = tc.attrib.get("name", "unknown")
+                  for node in (tc.find("failure"), tc.find("error")):
+                      if node is not None:
+                          msg = (node.attrib.get("message") or "").strip()
+                          msg = re.sub(r'org\.opentest4j\.AssertionFailedError: ', '', msg)
+                          short = "\n".join(msg.splitlines()[:6])
+                          if len(msg.splitlines()) > 6:
+                              short += "\n  ..."
+                          failed_tests.append((name, short))
+
+          passed = total - failed - errors - skipped
+          status = "PASS" if (failed == 0 and errors == 0) else "FAIL"
+
+          print("=" * 42)
+          print(f"  API TEST SUMMARY — {status}")
+          print("=" * 42)
+          print(f"  Total: {total}  Passed: {passed}  Failed: {failed}  Errors: {errors}  Skipped: {skipped}")
+          if failed_tests:
+              print("  Failed:")
+              for name, reason in failed_tests[:15]:
+                  print(f"    - {name}")
+                  print("      " + reason.replace("\n", "\n      "))
+          print("=" * 42)
+
+          if failed > 0 or errors > 0:
+              sys.exit(1)
+          PY
+
+      - name: Build notification payloads
+        if: always()
+        working-directory: ./qa/api-tests
+        run: |
+          python3 - <<'PY'
+          import glob, json, xml.etree.ElementTree as ET, os, re
+
+          files = glob.glob("target/surefire-reports/TEST-*.xml")
+          total = failed = errors = skipped = 0
+          failed_items = []
+
+          repo     = os.environ.get("GITHUB_REPOSITORY", "")
+          branch   = os.environ.get("GITHUB_REF_NAME", "")
+          run_url  = f"{os.environ.get('GITHUB_SERVER_URL')}/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
+          repo_name  = repo.split('/')[-1] if '/' in repo else repo
+          repo_owner = os.environ.get("GITHUB_REPOSITORY_OWNER", repo.split('/')[0] if '/' in repo else "")
+          pages_url  = f"https://{repo_owner}.github.io/{repo_name}/"
+
+          if not files:
+              with open("slack_payload.json", "w") as f:
+                  json.dump({"text": f"*API Tests: FAIL*\nNo test reports.\nRun: {run_url}"}, f)
+              with open("email_body.txt", "w") as f:
+                  f.write(f"API Tests: FAIL\nNo test reports.\nRun: {run_url}")
+              raise SystemExit(0)
+
+          for fpath in files:
+              root = ET.parse(fpath).getroot()
+              total   += int(root.attrib.get("tests", 0))
+              failed  += int(root.attrib.get("failures", 0))
+              errors  += int(root.attrib.get("errors", 0))
+              skipped += int(root.attrib.get("skipped", 0))
+              for tc in root.findall("testcase"):
+                  name = tc.attrib.get("name", "unknown")
+                  for node in (tc.find("failure"), tc.find("error")):
+                      if node is not None:
+                          msg = (node.attrib.get("message") or "").strip()
+                          msg = re.sub(r'org\.opentest4j\.AssertionFailedError: ', '', msg)
+                          short = "\n".join(msg.splitlines()[:6])
+                          failed_items.append((name, short))
+
+          passed = total - failed - errors - skipped
+          status = "PASS" if (failed == 0 and errors == 0) else "FAIL"
+
+          slack_lines = [
+              f"*API Tests: {status}*",
+              f"Total: *{total}* | Passed: *{passed}* | Failed: *{failed}* | Errors: *{errors}* | Skipped: *{skipped}*",
+              "",
+              f"Repo: `{repo}` | Branch: `{branch}`",
+              f"Run: {run_url}",
+              f"Allure Report: {pages_url}",
+          ]
+          if failed_items:
+              slack_lines.insert(2, "*Failed:*")
+              for name, reason in failed_items[:12]:
+                  slack_lines.append(f"  - *{name}*: {reason}")
+
+          with open("slack_payload.json", "w") as f:
+              json.dump({"text": "\n".join(slack_lines)}, f)
+
+          email_lines = [
+              f"API Tests: {status}",
+              f"Total: {total} | Passed: {passed} | Failed: {failed} | Errors: {errors} | Skipped: {skipped}",
+              "",
+              f"Repo: {repo} | Branch: {branch}",
+              f"Run: {run_url}",
+              f"Allure Report: {pages_url}",
+          ]
+          if failed_items:
+              email_lines.insert(2, "Failed:")
+              for name, reason in failed_items[:12]:
+                  email_lines.append(f"  - {name}: {reason}")
+
+          with open("email_body.txt", "w") as f:
+              f.write("\n".join(email_lines))
+          PY
+
+      - name: Notify Slack
+        if: always()
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload-file-path: qa/api-tests/slack_payload.json
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send email report
+        if: always() && vars.SEND_EMAIL == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "API Tests — ${{ job.status == 'success' && 'PASS' || 'FAIL' }} — ${{ github.repository }} — ${{ github.ref_name }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.SMTP_USERNAME }}
+          secure: false
+          body: file://email_body.txt
+
+      - name: Print Surefire reports (on failure)
+        if: failure()
+        working-directory: ./qa/api-tests
+        run: |
+          ls -la target/surefire-reports || true
+          for f in target/surefire-reports/*.txt; do [ -f "$f" ] && cat "$f"; done
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-allure-results
+          path: qa/api-tests/target/allure-results/
+          retention-days: 30
+
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-surefire-reports
+          path: qa/api-tests/target/surefire-reports/
+          retention-days: 30
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
+
+  # ──────────────────────────────────────────────────────────
+  # UI Tests — Selenium against live frontend
+  # ──────────────────────────────────────────────────────────
+
+  ui-tests:
+    name: UI Tests — Selenium
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start application stack
+        run: |
+          docker compose up -d
+          echo "Waiting for frontend to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend is healthy."
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Frontend did not start in time."
+              docker compose logs frontend
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Run UI tests
+        working-directory: ./qa/ui-tests
+        run: mvn test -B
+        continue-on-error: true
+
+      - name: Upload UI test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-surefire-reports
+          path: qa/ui-tests/target/surefire-reports/
+          retention-days: 30
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
+
+  # ──────────────────────────────────────────────────────────
+  # Allure Report — Publish to GitHub Pages
+  # ──────────────────────────────────────────────────────────
+
+  allure-report:
+    name: Allure Report — Publish
+    runs-on: ubuntu-latest
+    needs: [api-tests]
+    if: always()
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+
+      - name: Download Allure results
+        uses: actions/download-artifact@v4
+        with:
+          name: api-allure-results
+          path: qa/api-tests/target/allure-results
+
+      - name: Load test report history
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+        continue-on-error: true
+
+      - name: Copy history for trends
+        run: |
+          mkdir -p qa/api-tests/target/allure-results/history
+          if [ -d "gh-pages/history" ]; then
+            cp -r gh-pages/history/* qa/api-tests/target/allure-results/history/ 2>/dev/null || true
+          fi
+
+      - name: Verify Allure results
+        run: |
+          if [ ! -d "qa/api-tests/target/allure-results" ]; then
+            echo "::error::Allure results directory not found."
+            exit 1
+          fi
+          N=$(find qa/api-tests/target/allure-results -maxdepth 1 -type f \( -name "*-result.json" -o -name "*-container.json" \) 2>/dev/null | wc -l)
+          if [ "$N" -eq 0 ]; then
+            echo "::error::No Allure result files found."
+            ls -la qa/api-tests/target/allure-results
+            exit 1
+          fi
+          echo "Allure results: $N file(s)."
+
+      - name: Generate Allure report
+        working-directory: ./qa/api-tests
+        run: mvn allure:report -B
+
+      - name: Prepare report for GitHub Pages
+        run: |
+          mkdir -p allure-report-final
+          if [ -d "qa/api-tests/target/site/allure-maven-plugin" ]; then
+            cp -r qa/api-tests/target/site/allure-maven-plugin/* allure-report-final/
+          elif [ -d "qa/api-tests/target/allure-report" ]; then
+            cp -r qa/api-tests/target/allure-report/* allure-report-final/
+          else
+            echo "::error::No Allure report directory found."
+            exit 1
+          fi
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report-final
+
+      - name: Upload Allure report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report-final/
+          retention-days: 30

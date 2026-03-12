@@ -1,19 +1,26 @@
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
+import { Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 
-@Injectable({ providedIn: "root" })
+import { PollResult } from '@/models';
+import { API_BASE_URL } from '@/constants';
+
+@Injectable({ providedIn: 'root' })
 export class PollService {
-  private apiUrl = "/api/polls";
+  private apiUrl = `${API_BASE_URL}/polls`;
 
   constructor(private http: HttpClient) {}
 
   getAll(page = 0, size = 10): Observable<any> {
-    return this.http.get(`${this.apiUrl}?page=${page}&size=${size}`);
+    return this.http.get(`${this.apiUrl}/my-polls?page=${page}&size=${size}`);
   }
 
   getById(id: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/${id}`);
+  }
+
+  getResults(id: number): Observable<PollResult> {
+    return this.http.get<PollResult>(`${this.apiUrl}/${id}/results`);
   }
 
   create(poll: any): Observable<any> {

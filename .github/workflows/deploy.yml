@@ -1,0 +1,415 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop, feature/infra, main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
+  # Set environment dynamically based on branch
+  ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+  TF_DIR: ${{ github.ref_name == 'main' && 'devops/terraform/environments/production' || 'devops/terraform/environments/staging' }}
+
+jobs:
+  terraform:
+    name: Terraform Init/Plan/Apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
+      TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+      TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform plan -out=tfplan -lock=false
+
+      - name: Stop data-engineering task (avoid SG delete hang)
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          FAMILY="quickpoll-${ENV}-data-engineering"
+          SG_NAME="quickpoll-${ENV}-data-engineering-sg"
+
+          TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --family "$FAMILY" \
+            --desired-status RUNNING \
+            --query "taskArns[]" \
+            --output text || true)
+
+          if [[ -n "${TASKS:-}" && "${TASKS}" != "None" ]]; then
+            echo "Stopping data-engineering tasks: $TASKS"
+            for T in $TASKS; do
+              aws ecs stop-task --cluster "$CLUSTER" --task "$T" --no-cli-pager || true
+            done
+            echo "Waiting for tasks to stop..."
+            aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks $TASKS || true
+          else
+            echo "No running data-engineering tasks."
+          fi
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$SG_NAME" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text || true)
+
+          if [[ -n "${SG_ID:-}" && "${SG_ID}" != "None" ]]; then
+            echo "Waiting for SG $SG_ID ENIs to detach..."
+            MAX_SECONDS=600
+            INTERVAL=15
+            END=$((SECONDS+MAX_SECONDS))
+            while true; do
+              ENIS=$(aws ec2 describe-network-interfaces \
+                --filters "Name=group-id,Values=$SG_ID" \
+                --query "NetworkInterfaces[*].NetworkInterfaceId" \
+                --output text || true)
+              if [[ -z "${ENIS:-}" || "${ENIS}" == "None" ]]; then
+                echo "SG $SG_ID has no attached ENIs."
+                break
+              fi
+              if [[ $SECONDS -ge $END ]]; then
+                echo "::error::SG $SG_ID still has attached ENIs after ${MAX_SECONDS}s: $ENIS"
+                exit 1
+              fi
+              echo "SG $SG_ID still attached to ENIs: $ENIS"
+              sleep "$INTERVAL"
+            done
+          else
+            echo "Data-engineering SG not found; skipping ENI wait."
+          fi
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform apply -auto-approve -lock=false tfplan
+
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    needs: terraform
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: ./backend
+            service: backend
+          - context: ./frontend
+            service: frontend
+          - context: ./data-engineering
+            service: data-engineering
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          SERVICE: quickpoll/${{ matrix.service }}
+          SHA: ${{ github.sha }}
+        run: |
+          docker build \
+            -t "$REGISTRY/$SERVICE:$SHA" \
+            -t "$REGISTRY/$SERVICE:${ENV}" \
+            ${{ matrix.context }}
+
+          docker push "$REGISTRY/$SERVICE:$SHA"
+          docker push "$REGISTRY/$SERVICE:${ENV}"
+
+  deploy:
+    name: Deploy to ECS (${{ github.ref_name == 'main' && 'Production' || 'Staging' }})
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    timeout-minutes: 20
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force new deployment - backend
+        run: |
+          aws ecs update-service \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-backend" \
+            --force-new-deployment \
+            --no-cli-pager
+
+      - name: Force new deployment - frontend
+        run: |
+          aws ecs update-service \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --service "quickpoll-${ENV}-frontend" \
+            --force-new-deployment \
+            --no-cli-pager
+
+      - name: Wait for backend to stabilize (max 10m)
+        id: backend-wait
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+          MAX_SECONDS=600
+          INTERVAL=20
+          END=$((SECONDS+MAX_SECONDS))
+
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "backend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "backend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::backend did not stabilize within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Backend debug on failure
+        if: steps.backend-wait.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-backend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/backend" --since 15m --format short || true
+          exit 1
+
+      - name: Wait for frontend to stabilize (max 10m)
+        id: frontend-wait
+        continue-on-error: true
+        if: steps.backend-wait.outcome == 'success'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+          MAX_SECONDS=600
+          INTERVAL=20
+          END=$((SECONDS+MAX_SECONDS))
+
+          while true; do
+            DESIRED=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].desiredCount" --output text)
+            RUNNING=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].runningCount" --output text)
+            PRIMARY_STATE=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].deployments[?status=='PRIMARY'].rolloutState" --output text)
+
+            echo "frontend: desired=$DESIRED running=$RUNNING rolloutState=$PRIMARY_STATE"
+
+            if [[ "$PRIMARY_STATE" == "COMPLETED" && "$RUNNING" == "$DESIRED" ]]; then
+              echo "frontend is stable"
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::frontend did not stabilize within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Frontend debug on failure
+        if: steps.frontend-wait.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          SERVICE="quickpoll-${ENV}-frontend"
+
+          aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" --query "services[0].events[0:8].message" --output table || true
+          TASKS=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" --query "taskArns[]" --output text || true)
+          if [[ -n "${TASKS:-}" ]]; then
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks $TASKS \
+              --query "tasks[].{taskArn:taskArn,lastStatus:lastStatus,stopCode:stopCode,stoppedReason:stoppedReason,exitCode:containers[0].exitCode}" \
+              --output table || true
+          fi
+
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || true
+          exit 1
+
+      - name: Get frontend container logs
+        if: always()
+        run: |
+          aws logs tail "/ecs/quickpoll/${ENV}/frontend" --since 15m --format short || echo "No logs available"
+
+  # ── Data Engineering Bootstrap Task ──────────────────────────────────────────
+  # Runs AFTER backend deploy because the backend must start and create its
+  # OLTP database tables (votes, polls, users, etc.) BEFORE the data engineering
+  # task can deploy triggers against those tables.
+  run-data-engineering-task:
+    name: Run Data Engineering Bootstrap Task
+    runs-on: ubuntu-latest
+    needs: deploy
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve network config from Terraform outputs
+        id: net
+        run: |
+          # Fetch the private app subnet IDs and data-engineering SG ID
+          # Fallback: read directly from AWS resource tags if SSM parameters aren't used
+          SUBNET_IDS=$(aws ec2 describe-subnets \
+            --filters \
+              "Name=tag:Project,Values=quickpoll" \
+              "Name=tag:Environment,Values=${ENV}" \
+              "Name=tag:Tier,Values=private-app" \
+            --query "Subnets[*].SubnetId" \
+            --output text | tr '\t' ',')
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters \
+              "Name=group-name,Values=quickpoll-${ENV}-data-engineering-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "sg_id=$SG_ID"           >> $GITHUB_OUTPUT
+
+      - name: Resolve task definition ARN
+        id: taskdef
+        run: |
+          ARN=$(aws ecs list-task-definitions \
+            --family-prefix "quickpoll-${ENV}-data-engineering" \
+            --sort DESC \
+            --query "taskDefinitionArns[0]" \
+            --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Run data-engineering Fargate task
+        id: run-task
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "quickpoll-${ENV}-cluster" \
+            --task-definition "${{ steps.taskdef.outputs.arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={\
+              subnets=[${{ steps.net.outputs.subnet_ids }}],\
+              securityGroups=[${{ steps.net.outputs.sg_id }}],\
+              assignPublicIp=DISABLED}" \
+            --query "tasks[0].taskArn" \
+            --output text \
+            --no-cli-pager)
+          echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+          echo "Launched data-engineering task: $TASK_ARN"
+
+      - name: Wait for task to complete
+        run: |
+          set -euo pipefail
+          CLUSTER="quickpoll-${ENV}-cluster"
+          TASK_ARN="${{ steps.run-task.outputs.task_arn }}"
+          MAX_SECONDS=600
+          INTERVAL=15
+          END=$((SECONDS + MAX_SECONDS))
+
+          echo "Waiting for task $TASK_ARN to complete..."
+          while true; do
+            STATUS=$(aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks "$TASK_ARN" \
+              --query "tasks[0].lastStatus" \
+              --output text)
+
+            echo "Task status: $STATUS"
+
+            if [[ "$STATUS" == "STOPPED" ]]; then
+              EXIT_CODE=$(aws ecs describe-tasks \
+                --cluster "$CLUSTER" \
+                --tasks "$TASK_ARN" \
+                --query "tasks[0].containers[0].exitCode" \
+                --output text)
+              echo "Container exit code: $EXIT_CODE"
+              if [[ "$EXIT_CODE" != "0" ]]; then
+                echo "::error::data-engineering task failed with exit code $EXIT_CODE"
+                exit 1
+              fi
+              echo "data-engineering task completed successfully."
+              break
+            fi
+
+            if [[ $SECONDS -ge $END ]]; then
+              echo "::error::data-engineering task did not finish within ${MAX_SECONDS}s"
+              exit 1
+            fi
+
+            sleep "$INTERVAL"
+          done
+
+      - name: Tail CloudWatch logs on failure
+        if: failure()
+        run: |
+          LOG_GROUP="/ecs/quickpoll/${ENV}/data-engineering"
+          aws logs tail "$LOG_GROUP" --since 20m --format short || echo "No logs available."

@@ -1,0 +1,52 @@
+variable "aws_region" {
+  type    = string
+  default = "eu-west-1"
+}
+
+variable "vpc_cidr" {
+  type    = string
+  default = "10.1.0.0/16"
+}
+
+variable "availability_zones" {
+  type    = list(string)
+  default = ["eu-west-1a", "eu-west-1b"]
+}
+
+variable "public_subnet_cidrs" {
+  type    = list(string)
+  default = ["10.1.1.0/24", "10.1.2.0/24"]
+}
+
+variable "private_app_subnet_cidrs" {
+  type    = list(string)
+  default = ["10.1.10.0/24", "10.1.11.0/24"]
+}
+
+variable "private_db_subnet_cidrs" {
+  type    = list(string)
+  default = ["10.1.20.0/24", "10.1.21.0/24"]
+}
+
+variable "db_name" {
+  type    = string
+  default = "quickpoll"
+}
+
+# Provide via: export TF_VAR_db_username="..."
+variable "db_username" {
+  type      = string
+  sensitive = true
+}
+
+# Provide via: export TF_VAR_db_password="..."
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+
+# Provide via: export TF_VAR_jwt_secret="..."
+variable "jwt_secret" {
+  type      = string
+  sensitive = true
+}

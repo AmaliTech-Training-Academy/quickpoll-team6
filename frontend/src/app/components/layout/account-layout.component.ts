@@ -1,0 +1,24 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { ContentHeaderComponent } from '@/components/ui/content-header.component';
+import { SecondaryNavbarComponent } from '../ui/navbar.component';
+
+@Component({
+  selector: 'app-account',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ContentHeaderComponent, SecondaryNavbarComponent, RouterOutlet],
+  template: `
+    <app-content-header pageTitle="Account" />
+    <div class="p-5 flex flex-col maxview-container gap-5">
+      <app-secondary-navbar [navLinks]="navLinks" />
+      <router-outlet />
+    </div>
+  `,
+})
+export class AccountLayoutComponent {
+  protected navLinks = [
+    { label: 'Profile', path: '/~/account/profile' },
+    { label: 'Teams', path: '/~/account/teams' },
+    { label: 'Settings', path: '/~/account/settings' },
+  ];
+}

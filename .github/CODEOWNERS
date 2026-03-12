@@ -1,0 +1,26 @@
+# Global fallback
+* @nabbi007 @Samuel1796
+
+# DevOps & Infrastructure
+/.github/ @nabbi007
+/devops/ @nabbi007
+docker-compose.yml @nabbi007
+Dockerfile @nabbi007
+Makefile @nabbi007
+.env* @nabbi007
+
+# Backend (Java/Spring Boot)
+/backend/ @basit-devBE
+/backend/src/main/java/ @basit-devBE
+/backend/pom.xml @basit-devBE
+
+
+# Data Engineering
+/data-engineering/ @henryantwi
+
+# QA & Testing
+/qa/ @Samuel1796
+
+# Documentation
+*.md @nabbi007
+/docs/ @nabbi007
