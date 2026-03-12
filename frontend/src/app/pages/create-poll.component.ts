@@ -277,12 +277,24 @@ type PollAudience = 'company-wide' | 'department';
                     app-input
                     type="number"
                     min="1"
-                    [max]="validOptionCount() || getOptions().length"
+                    [max]="getOptions().length"
                     [value]="newPollForm.controls.maxSelections.value ?? ''"
                     (input)="onMaxSelectionsInput($event)"
                     placeholder="Leave blank to match the number of options"
                     data-test-id="create-poll-max-selections-input"
                   />
+                  @if (newPollForm.controls.maxSelections.errors) {
+                    <div
+                      class="form-field-error"
+                      role="alert"
+                      aria-live="assertive"
+                      data-test-id="create-poll-max-selections-error-message"
+                    >
+                      @if (newPollForm.controls.maxSelections.errors['max']) {
+                        <span>Maximum selections cannot exceed the number of options.</span>
+                      }
+                    </div>
+                  }
                   <p class="text-xs text-muted-foreground">
                     Leave this blank to match the number of options
                   </p>
