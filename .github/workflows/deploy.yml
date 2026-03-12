@@ -317,6 +317,14 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Wait for RDS to be available
+        run: |
+          set -euo pipefail
+          DB_ID="quickpoll-${ENV}-postgres"
+          echo "Waiting for RDS instance ${DB_ID} to be available..."
+          aws rds wait db-instance-available --db-instance-identifier "$DB_ID"
+          echo "RDS is available."
+
       - name: Resolve network config from Terraform outputs
         id: net
         run: |
@@ -338,6 +346,38 @@ jobs:
 
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
           echo "sg_id=$SG_ID"           >> $GITHUB_OUTPUT
+
+      - name: Ensure DB allows data-engineering access
+        run: |
+          set -euo pipefail
+          DB_SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=quickpoll-${ENV}-db-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          DE_SG_ID="${{ steps.net.outputs.sg_id }}"
+
+          if [[ -z "${DB_SG_ID:-}" || "${DB_SG_ID}" == "None" || -z "${DE_SG_ID:-}" || "${DE_SG_ID}" == "None" ]]; then
+            echo "::error::Could not resolve DB SG or data-engineering SG (db=${DB_SG_ID:-}, de=${DE_SG_ID:-})."
+            exit 1
+          fi
+
+          RULE_OK=$(aws ec2 describe-security-groups \
+            --group-ids "$DB_SG_ID" \
+            --query "SecurityGroups[0].IpPermissions[?FromPort==\`5432\` && ToPort==\`5432\` && IpProtocol=='tcp'].UserIdGroupPairs[?GroupId=='${DE_SG_ID}'] | length(@)" \
+            --output text)
+
+          if [[ "${RULE_OK}" == "0" || "${RULE_OK}" == "None" ]]; then
+            echo "DB SG missing ingress from data-engineering SG. Adding rule..."
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$DB_SG_ID" \
+              --protocol tcp \
+              --port 5432 \
+              --source-group "$DE_SG_ID" \
+              --no-cli-pager
+          else
+            echo "DB SG already allows data-engineering access."
+          fi
 
       - name: Resolve task definition ARN
         id: taskdef
