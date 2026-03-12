@@ -1,0 +1,20 @@
+{
+  "scores": {
+    "goal_clarity": 8,
+    "story_structure": 10,
+    "slide_assertions": 10,
+    "evidence_quality": 10,
+    "chart_fit": 10,
+    "visual_accessibility": 8,
+    "coherence": 8,
+    "speakability": 10,
+    "deliverables": 9,
+    "robustness": 7
+  },
+  "total": 90,
+  "max": 100,
+  "passed": true,
+  "suggestions": [],
+  "slide_count": 12,
+  "notes_count": 12
+}

@@ -31,9 +31,13 @@ else:
     DB_USER = config("DB_USER", default="quickpoll")
     DB_PASSWORD = config("DB_PASSWORD", default="quickpoll123")
 
+DB_SSLMODE: str = config("DB_SSLMODE", default="")
+
 DATABASE_URL: str = (
     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
+if DB_SSLMODE:
+    DATABASE_URL += f"?sslmode={DB_SSLMODE}"
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 LOG_LEVEL: str = config("LOG_LEVEL", default="INFO")
