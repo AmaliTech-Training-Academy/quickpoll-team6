@@ -9,7 +9,9 @@ import { RouterLink } from '@angular/router';
   template: `
     <div class="grid min-h-screen place-items-center">
       <div class="">
-        <button routerLink="~" app-button>Go to Dashboard</button>
+        <button routerLink="~" app-button data-test-id="landing-go-to-dashboard-button">
+          Go to Dashboard
+        </button>
       </div>
     </div>
   `,

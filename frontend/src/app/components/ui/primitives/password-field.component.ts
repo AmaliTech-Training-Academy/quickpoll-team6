@@ -22,6 +22,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
   ],
   host: {
     '[attr.data-disabled]': 'isDisabled() ? true : null',
+    '[attr.data-test-id]': 'testId()',
   },
   template: `
     <div class="password-field group">
@@ -35,6 +36,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
         [attr.aria-label]="ariaLabel()"
         [attr.autocomplete]="autocomplete()"
         [attr.aria-describedby]="describedBy() || null"
+        [attr.data-test-id]="resolvedInputTestId()"
         (input)="onInput($event)"
         (blur)="handleBlur()"
         class="password-input"
@@ -46,6 +48,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
         [disabled]="isDisabled()"
         [attr.aria-label]="toggleAriaLabel()"
         [attr.aria-pressed]="visible()"
+        [attr.data-test-id]="resolvedToggleTestId()"
         (click)="toggleVisibility()"
       >
         <ng-icon size="1.2em" [name]="visible() ? 'hugeViewOffSlash' : 'hugeView'" />
@@ -169,6 +172,7 @@ export class PasswordFieldComponent implements ControlValueAccessor {
   readonly ariaLabel = input('Password');
   readonly autocomplete = input('current-password');
   readonly describedBy = input<string | null>(null);
+  readonly testId = input<string | null>(null);
   readonly required = input(false, { transform: booleanAttribute });
   readonly disabled = input(false, { transform: booleanAttribute });
 
@@ -182,6 +186,10 @@ export class PasswordFieldComponent implements ControlValueAccessor {
   );
 
   protected readonly isDisabled = computed(() => this.disabled() || this.formDisabled());
+  protected readonly resolvedInputTestId = computed(() => this.testId());
+  protected readonly resolvedToggleTestId = computed(() =>
+    this.testId() ? `${this.testId()}-toggle-button` : null,
+  );
 
   private readonly formDisabled = signal(false);
   private onChange?: ChangeFn<string | null>;

@@ -18,14 +18,14 @@ import {
     provideDialogState(),
   ],
   template: `
-    <div ngpDialog>
-      <div class="dialog-content">
-        <h2 ngpDialogTitle>{{ header() }}</h2>
-        <p ngpDialogDescription>
+    <div ngpDialog data-test-id="dialog">
+      <div class="dialog-content" data-test-id="dialog-content">
+        <h2 ngpDialogTitle data-test-id="dialog-title">{{ header() }}</h2>
+        <p ngpDialogDescription data-test-id="dialog-description">
           <ng-content />
         </p>
       </div>
-      <div class="dialog-actions">
+      <div class="dialog-actions" data-test-id="dialog-actions">
         <ng-content select="[slot=actions]" />
       </div>
     </div>

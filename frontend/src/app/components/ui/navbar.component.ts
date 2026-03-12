@@ -13,12 +13,29 @@ export interface SidebarLink {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NavbarButtonComponent],
   template: `
-    <nav class="flex gap-1 mb-5 max-w-full overflow-x-auto">
+    <nav class="flex gap-1 mb-5 max-w-full overflow-x-auto" data-test-id="secondary-nav">
       @for (link of navLinks(); track trackByLink(link)) {
         <app-navbar-button
           [label]="link.label"
           [path]="link.path"
           [queryParams]="link.queryParams ?? null"
+          [attr.data-test-id]="
+            link.label === 'All'
+              ? 'poll-filter-all-button'
+              : link.label === 'Active Polls'
+                ? 'poll-filter-active-button'
+                : link.label === 'My Department'
+                  ? 'poll-filter-department-button'
+                  : link.label === 'Created by Me'
+                    ? 'poll-filter-me-button'
+                    : link.label === 'Profile'
+                      ? 'account-profile-button'
+                      : link.label === 'Teams'
+                        ? 'account-teams-button'
+                        : link.label === 'Settings'
+                          ? 'account-settings-button'
+                          : null
+          "
         />
       }
     </nav>
