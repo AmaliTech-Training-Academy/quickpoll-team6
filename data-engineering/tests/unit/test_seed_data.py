@@ -79,6 +79,20 @@ def test_validate_seed_references_passes_with_polls_edge() -> None:
     sd._validate_seed_references()
 
 
+def test_build_edge_poll_params_preserves_integer_day_offsets() -> None:
+    params = sd._build_edge_poll_params()
+
+    assert [param["expires_days"] for param in params] == [30, -7, 30]
+    assert all(isinstance(param["expires_days"], int) for param in params)
+
+
+def test_edge_poll_sql_uses_make_interval_regression() -> None:
+    sql = str(sd._EDGE_POLLS_SQL)
+
+    assert "make_interval(days => :expires_days)" in sql
+    assert ":expires_interval::interval" not in sql
+
+
 def test_reset_sequences_executes_for_all_tables() -> None:
     conn = MagicMock()
     sd._reset_sequences(conn)

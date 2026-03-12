@@ -150,6 +150,18 @@ VOTES = [
     (32, 10, 31, 7),
 ]
 
+_EDGE_POLLS_SQL = text("""
+    INSERT INTO polls (
+        id, title, question, description, creator_id, multi_select,
+        expires_at, active, created_at
+    )
+    VALUES (
+        :id, :title, :question, :desc, :creator, false,
+        NOW() + make_interval(days => :expires_days), :active, NOW()
+    )
+    ON CONFLICT (id) DO NOTHING
+""")
+
 
 def _validate_seed_references() -> None:
     """Fail fast if static seed rows are internally inconsistent."""
@@ -247,6 +259,30 @@ def _reset_sequences(conn) -> None:
         )
 
 
+def _build_edge_poll_params() -> list[dict[str, object]]:
+    """Return edge-case poll parameters in a DB-friendly shape."""
+    return [
+        {
+            "id": poll_id,
+            "title": title,
+            "question": question,
+            "desc": description,
+            "creator": creator_id,
+            "expires_days": expires_days,
+            "active": active,
+        }
+        for (
+            poll_id,
+            title,
+            question,
+            description,
+            creator_id,
+            expires_days,
+            active,
+        ) in POLLS_EDGE
+    ]
+
+
 def seed() -> None:
     _validate_seed_references()
 
@@ -328,32 +364,7 @@ def seed() -> None:
         )
 
         # Edge-case polls with per-poll expires_at and active
-        edge_params = [
-            {
-                "id": p[0],
-                "title": p[1],
-                "question": p[2],
-                "desc": p[3],
-                "creator": p[4],
-                "expires_interval": f"{p[5]} days",
-                "active": p[6],
-            }
-            for p in POLLS_EDGE
-        ]
-        edge_result = conn.execute(
-            text("""
-            INSERT INTO polls (
-                id, title, question, description, creator_id, multi_select,
-                expires_at, active, created_at
-            )
-            VALUES (
-                :id, :title, :question, :desc, :creator, false,
-                NOW() + (:expires_interval::interval), :active, NOW()
-            )
-            ON CONFLICT (id) DO NOTHING
-        """),
-            edge_params,
-        )
+        edge_result = conn.execute(_EDGE_POLLS_SQL, _build_edge_poll_params())
         logger.info(
             "Seeded edge-case polls: requested=%d inserted=%d",
             len(POLLS_EDGE),

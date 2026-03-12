@@ -139,6 +139,9 @@ The process exits after setup. The triggers remain installed in Postgres.
 
 Use this scenario to point the pipeline at the **same database the Spring Boot backend uses**. This is the intended production setup: triggers fire whenever the backend inserts votes, polls, or users.
 
+If you are handing this environment over to the backend developer, also use
+[REMOTE_DB_HANDOFF.md](REMOTE_DB_HANDOFF.md) as the integration checklist.
+
 ### Step 1: Install dependencies
 
 ```powershell

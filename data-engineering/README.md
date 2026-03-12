@@ -35,24 +35,37 @@ docker build -t data-engineering .
 docker run --rm data-engineering
 ```
 
-### Local Dev Stack (Kafka + Postgres)
+### Local Trigger Dev Stack
 
 ```powershell
-docker compose -f docker-compose.kafka-dev.yml up -d
+docker compose -f docker-compose.local.yml up --build
 ```
 
-This starts:
+This local stack starts:
 
-- PostgreSQL on `localhost:5432` (`quickpoll` / `quickpoll` / `quickpoll123`)
-- Kafka on `localhost:9092`
-- Zookeeper on `localhost:2181`
+- PostgreSQL on `localhost:5432`
+- the trigger-based `data-pipeline` init container
 
-The PostgreSQL schema is initialized from `schema.sql` on first startup.
+The pipeline container waits for Postgres, deploys the analytics triggers, runs
+backfill, and exits cleanly. PostgreSQL continues serving future analytics
+updates through the installed triggers.
+
+To start only the database for local seeding/debugging:
+
+```powershell
+docker compose -f docker-compose.local.yml up -d postgres
+```
+
+The PostgreSQL schema is initialized from `schema.sql` on first startup, and
+the local stack is self-contained even if your `.env` is currently pointed at a
+shared staging database.
 
 Use `rav x seed` to load baseline sample data. It is self-contained and does
 not require backend `data.sql` to run first.
 
 ## Documentation
 
+- [docs/AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md](docs/AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md)
 - [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md)
+- [docs/REMOTE_DB_HANDOFF.md](docs/REMOTE_DB_HANDOFF.md)
 - [docs/](docs/)

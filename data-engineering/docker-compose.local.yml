@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:17
     container_name: qp-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: quickpoll
       POSTGRES_USER: quickpoll
@@ -20,15 +21,26 @@ services:
   data-pipeline:
     build: .
     container_name: qp-data-pipeline
+    restart: on-failure
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - ./.env
     environment:
-      # Container-internal service discovery (do not use localhost inside containers)
+      ENVIRONMENT: local-dev
+      # Force the local stack to stay self-contained even if .env contains
+      # staging credentials for a shared remote database.
       DB_HOST: postgres
       DB_PORT: "5432"
+      DB_NAME: quickpoll
+      DB_USER: quickpoll
+      DB_PASSWORD: quickpoll123
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+      DLQ_DIR: ${DLQ_DIR:-data/dlq}
+      BACKFILL_INTERVAL_MINUTES: ${BACKFILL_INTERVAL_MINUTES:-30}
+      WATERMARK_OVERLAP_MINUTES: ${WATERMARK_OVERLAP_MINUTES:-5}
+      FORCE_FULL_BACKFILL: ${FORCE_FULL_BACKFILL:-false}
+    volumes:
+      - ./data:/app/data
 
 volumes:
   pgdata:
