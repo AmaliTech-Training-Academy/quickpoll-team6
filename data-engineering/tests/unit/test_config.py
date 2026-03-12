@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
+
 
 def test_database_url_format() -> None:
     from data_engineering.config import DATABASE_URL
@@ -9,6 +14,47 @@ def test_database_url_format() -> None:
     assert DATABASE_URL.startswith("postgresql://")
     assert "@" in DATABASE_URL
     assert "/" in DATABASE_URL.split("@")[1]
+
+
+def test_database_url_includes_sslmode_when_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DATABASE_URL should include ?sslmode=require when DB_SSLMODE is set."""
+    import importlib
+
+    import data_engineering.config as cfg
+
+    # Preserve original engine singleton
+    original_engine = cfg._engine
+    cfg._engine = None
+
+    monkeypatch.setenv("DB_SSLMODE", "require")
+    try:
+        importlib.reload(cfg)
+        assert "?sslmode=require" in cfg.DATABASE_URL
+    finally:
+        monkeypatch.delenv("DB_SSLMODE", raising=False)
+        importlib.reload(cfg)
+        cfg._engine = original_engine
+
+
+def test_database_url_no_sslmode_when_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DATABASE_URL should NOT include sslmode when DB_SSLMODE is empty."""
+    import importlib
+
+    import data_engineering.config as cfg
+
+    original_engine = cfg._engine
+    cfg._engine = None
+
+    monkeypatch.setenv("DB_SSLMODE", "")
+    try:
+        importlib.reload(cfg)
+        assert "?sslmode" not in cfg.DATABASE_URL
+    finally:
+        monkeypatch.delenv("DB_SSLMODE", raising=False)
+        importlib.reload(cfg)
+        cfg._engine = original_engine
 
 
 def test_log_level_default() -> None:
