@@ -1,0 +1,286 @@
+package com.amalitech.quickpoll.service;
+
+import com.amalitech.quickpoll.dto.UserVoteResponse;
+import com.amalitech.quickpoll.errorhandlers.AlreadyVotedException;
+import com.amalitech.quickpoll.errorhandlers.PollAlreadyClosedException;
+import com.amalitech.quickpoll.dto.VoteRequest;
+import com.amalitech.quickpoll.dto.VoteResponse;
+import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
+import com.amalitech.quickpoll.event.VoteCastDomainEvent;
+import com.amalitech.quickpoll.model.*;
+import com.amalitech.quickpoll.model.enums.Role;
+import com.amalitech.quickpoll.model.enums.VoteStatus;
+import com.amalitech.quickpoll.repository.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class VoteServiceTest {
+
+    @Mock
+    private PollRepository pollRepository;
+
+    @Mock
+    private PollOptionRepository optionRepository;
+
+    @Mock
+    private VoteRepository voteRepository;
+
+    @Mock
+    private PollInviteRepository pollInviteRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @InjectMocks
+    private VoteService voteService;
+
+    @Test
+    void castVote_Success() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L, 2L));
+
+        User voter = new User();
+        voter.setId(1L);
+        voter.setEmail("voter@example.com");
+        voter.setRole(Role.USER);
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(true);
+        poll.setMaxSelections(3);
+
+        PollOption option1 = new PollOption();
+        option1.setId(1L);
+        option1.setPoll(poll);
+
+        PollOption option2 = new PollOption();
+        option2.setId(2L);
+        option2.setPoll(poll);
+
+        List<PollOption> options = List.of(option1, option2);
+
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
+        when(optionRepository.findAllById(request.getOptionIds())).thenReturn(options);
+        when(voteRepository.saveAll(anyList())).thenReturn(List.of(new Vote(), new Vote()));
+
+        VoteResponse result = voteService.castVote(pollId, request, voter);
+
+        assertNotNull(result);
+        assertTrue(result.getSuccess());
+        assertEquals("Vote cast successfully", result.getMessage());
+        verify(voteRepository).saveAll(anyList());
+        verify(eventPublisher, times(2)).publishEvent(any(VoteCastDomainEvent.class));
+    }
+
+    @Test
+    void castVote_PollNotFound() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L));
+
+        User voter = new User();
+        voter.setId(1L);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void castVote_PollClosed() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L));
+
+        User voter = new User();
+        voter.setId(1L);
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(false);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+
+        assertThrows(PollAlreadyClosedException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void castVote_AlreadyVoted() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L));
+
+        User voter = new User();
+        voter.setId(1L);
+        voter.setEmail("voter@example.com");
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(true);
+
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.VOTED);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
+
+        assertThrows(AlreadyVotedException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void castVote_ExceedsMaxSelections() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L, 2L, 3L));
+
+        User voter = new User();
+        voter.setId(1L);
+        voter.setEmail("voter@example.com");
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(true);
+        poll.setMaxSelections(2);
+
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void castVote_OptionNotFound() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L, 2L));
+
+        User voter = new User();
+        voter.setId(1L);
+        voter.setEmail("voter@example.com");
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(true);
+        poll.setMaxSelections(3);
+
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
+        when(optionRepository.findAllById(request.getOptionIds())).thenReturn(List.of(new PollOption()));
+
+        assertThrows(ResourceNotFoundException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void castVote_OptionNotBelongToPoll() {
+        Long pollId = 1L;
+        VoteRequest request = new VoteRequest();
+        request.setOptionIds(List.of(1L));
+
+        User voter = new User();
+        voter.setId(1L);
+        voter.setEmail("voter@example.com");
+
+        Poll poll = new Poll();
+        poll.setId(pollId);
+        poll.setActive(true);
+        poll.setMaxSelections(3);
+
+        Poll differentPoll = new Poll();
+        differentPoll.setId(2L);
+
+        PollOption option = new PollOption();
+        option.setId(1L);
+        option.setPoll(differentPoll);
+
+        PollInvite pollInvite = new PollInvite();
+        pollInvite.setVoteStatus(VoteStatus.PENDING);
+
+        when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
+        when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
+        when(optionRepository.findAllById(request.getOptionIds())).thenReturn(List.of(option));
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void getMyVotes_ReturnsPagedResults() {
+        User user = new User();
+        user.setId(1L);
+
+        Poll poll = new Poll();
+        poll.setId(10L);
+        poll.setQuestion("Favourite color?");
+
+        PollOption option = new PollOption();
+        option.setId(5L);
+        option.setOptionText("Blue");
+
+        Vote vote = new Vote();
+        vote.setId(100L);
+        vote.setPoll(poll);
+        vote.setOption(option);
+        vote.setUser(user);
+
+        org.springframework.data.domain.PageImpl<Vote> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(vote));
+
+        when(voteRepository.findByUserIdWithDetails(eq(1L), any()))
+                .thenReturn(page);
+
+        org.springframework.data.domain.Page<UserVoteResponse> result =
+                voteService.getMyVotes(user, 0, 10);
+
+        assertEquals(1, result.getTotalElements());
+        UserVoteResponse response = result.getContent().get(0);
+        assertEquals(100L, response.getVoteId());
+        assertEquals(10L, response.getPollId());
+        assertEquals("Favourite color?", response.getPollQuestion());
+        assertEquals(5L, response.getOptionId());
+        assertEquals("Blue", response.getOptionText());
+    }
+
+    @Test
+    void getMyVotes_EmptyPage() {
+        User user = new User();
+        user.setId(2L);
+
+        when(voteRepository.findByUserIdWithDetails(eq(2L), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        org.springframework.data.domain.Page<UserVoteResponse> result =
+                voteService.getMyVotes(user, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
+    }
+}

@@ -6,11 +6,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface VoteRepository extends JpaRepository<Vote, Long> {
+
+    @Query("SELECT v FROM Vote v JOIN FETCH v.poll JOIN FETCH v.option WHERE v.user.id = :userId ORDER BY v.createdAt DESC")
+    Page<Vote> findByUserIdWithDetails(@Param("userId") Long userId, Pageable pageable);
     List<Vote> findByPollId(Long pollId);
     Optional<Vote> findByUserIdAndPollId(Long userId, Long pollId);
     boolean existsByUserIdAndPollId(Long userId, Long pollId);

@@ -41,6 +41,15 @@ public class PollController {
         return ResponseEntity.ok(pollService.getEntitledPolls(user.getEmail(), page, size));
     }
 
+    @GetMapping("/my-created-polls")
+    @Operation(summary = "Get my created polls", description = "Retrieve polls created by the authenticated user")
+    public ResponseEntity<Page<PollResponse>> getMyCreatedPolls(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(pollService.getMyCreatedPolls(user, page, size));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get poll by ID", description = "Retrieve a specific poll by its ID")
     public ResponseEntity<PollResponse> getPollById(@PathVariable Long id) {
@@ -61,8 +70,6 @@ public class PollController {
         return ResponseEntity.ok(pollService.closePoll(id, user));
     }
 
-    // TODO: Add vote endpoint - POST /polls/{id}/vote
-    // TODO: Add close poll endpoint - PUT /polls/{id}/close
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete poll", description = "Delete a poll by its ID")
     public ResponseEntity<Void> deletePoll(@PathVariable Long id, @AuthenticationPrincipal User user) {

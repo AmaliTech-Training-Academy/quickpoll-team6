@@ -22,12 +22,20 @@ public interface PollRepository extends JpaRepository<Poll, Long> {
     @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id = :id")
     Optional<Poll> findByIdWithOptions(@Param("id") Long id);
 
+    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.invites i LEFT JOIN FETCH i.departmentMember dm LEFT JOIN FETCH dm.department WHERE p.id = :id")
+    Optional<Poll> findByIdWithInvites(@Param("id") Long id);
+
     @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id IN :ids")
     List<Poll> findAllByIdInWithOptions(@Param("ids") List<Long> ids);
 
+    @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.invites i LEFT JOIN FETCH i.departmentMember dm LEFT JOIN FETCH dm.department WHERE p.id IN :ids")
+    List<Poll> findAllByIdInWithInvites(@Param("ids") List<Long> ids);
+
     List<Poll> findByCreatorIdOrderByCreatedAtDesc(Long creatorId);
 
-    @Query("SELECT DISTINCT p FROM Poll p JOIN FETCH p.options JOIN FETCH p.creator JOIN p.invites i JOIN i.departmentMember dm WHERE dm.email = :email ORDER BY p.createdAt DESC")
+    Page<Poll> findByCreatorOrderByCreatedAtDesc(com.amalitech.quickpoll.model.User creator, Pageable pageable);
+
+    @Query("SELECT DISTINCT p FROM Poll p JOIN p.invites i JOIN i.departmentMember dm WHERE dm.email = :email ORDER BY p.createdAt DESC")
     Page<Poll> findEntitledPollsByEmail(@Param("email") String email, Pageable pageable);
 
     @Modifying
