@@ -7,9 +7,9 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class PollBasicResponse {
     private Long id;
-    private String title;
     private String question;
     private String description;
+    private String creatorEmail;
     private String creatorName;
     private Integer maxSelections;
     private LocalDateTime expiresAt;

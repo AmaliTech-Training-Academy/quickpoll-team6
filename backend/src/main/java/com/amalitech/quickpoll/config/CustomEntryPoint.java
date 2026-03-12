@@ -28,14 +28,12 @@ public class CustomEntryPoint implements AuthenticationEntryPoint {
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.UNAUTHORIZED.value(),
-                "Unauthorized: Authentication is required to access this resource",
-                "Unauthorized access to " + request.getRequestURI(),
+                "Unauthorized",
+                authException.getMessage() != null ? authException.getMessage() : "Authentication is required to access this resource",
                 request.getRequestURI()
-
         );
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
-
     }
 }
