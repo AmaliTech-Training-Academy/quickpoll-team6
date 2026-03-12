@@ -1,8 +1,8 @@
-name: Deploy (Staging)
+name: Deploy
 
 on:
   push:
-    branches: [develop, feature/infra]
+    branches: [develop, feature/infra, main]
     paths-ignore:
       - "docs/**"
       - "README.md"
@@ -14,8 +14,9 @@ permissions:
 
 env:
   AWS_REGION: eu-west-1
-  ENV: staging
-  TF_DIR: devops/terraform/environments/staging
+  # Set environment dynamically based on branch
+  ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+  TF_DIR: ${{ github.ref_name == 'main' && 'devops/terraform/environments/production' || 'devops/terraform/environments/staging' }}
 
 jobs:
   terraform:
@@ -221,7 +222,7 @@ jobs:
           aws logs tail "$LOG_GROUP" --since 20m --format short || echo "No logs available."
 
   deploy:
-    name: Deploy to ECS (Staging)
+    name: Deploy to ECS (${{ github.ref_name == 'main' && 'Production' || 'Staging' }})
     runs-on: ubuntu-latest
     needs: run-data-engineering-task
     timeout-minutes: 20
