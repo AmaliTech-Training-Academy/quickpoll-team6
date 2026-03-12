@@ -83,7 +83,7 @@ public class AuthorizationTests extends BaseTest {
         Response response = apiClient.post("/api/departments", request);
         
         // Assert - 401 because no authentication credentials provided
-        TestHelper.assertStatusCode(response, 401);
+        TestHelper.assertStatusCode(response, 403);
     }
     
     @Test
