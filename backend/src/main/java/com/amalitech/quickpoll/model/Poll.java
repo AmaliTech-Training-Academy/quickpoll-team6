@@ -32,9 +32,13 @@ public class Poll {
     @ToString.Exclude
     private List<PollOption> options = new ArrayList<>();
 
-    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<PollInvite> invites = new ArrayList<>();
+
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    private List<Vote> votes = new ArrayList<>();
 
     @Column(name = "max_selections", nullable = false)
     private Integer maxSelections = 1;

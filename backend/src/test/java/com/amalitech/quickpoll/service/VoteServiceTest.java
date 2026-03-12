@@ -1,5 +1,8 @@
 package com.amalitech.quickpoll.service;
 
+import com.amalitech.quickpoll.dto.UserVoteResponse;
+import com.amalitech.quickpoll.errorhandlers.AlreadyVotedException;
+import com.amalitech.quickpoll.errorhandlers.PollAlreadyClosedException;
 import com.amalitech.quickpoll.dto.VoteRequest;
 import com.amalitech.quickpoll.dto.VoteResponse;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
@@ -117,7 +120,7 @@ class VoteServiceTest {
 
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
 
-        assertThrows(IllegalStateException.class, 
+        assertThrows(PollAlreadyClosedException.class, 
             () -> voteService.castVote(pollId, request, voter));
     }
 
@@ -141,7 +144,7 @@ class VoteServiceTest {
         when(pollRepository.findByIdWithOptions(pollId)).thenReturn(Optional.of(poll));
         when(pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())).thenReturn(Optional.of(pollInvite));
 
-        assertThrows(IllegalStateException.class, 
+        assertThrows(AlreadyVotedException.class, 
             () -> voteService.castVote(pollId, request, voter));
     }
 
@@ -227,5 +230,57 @@ class VoteServiceTest {
 
         assertThrows(IllegalArgumentException.class, 
             () -> voteService.castVote(pollId, request, voter));
+    }
+
+    @Test
+    void getMyVotes_ReturnsPagedResults() {
+        User user = new User();
+        user.setId(1L);
+
+        Poll poll = new Poll();
+        poll.setId(10L);
+        poll.setQuestion("Favourite color?");
+
+        PollOption option = new PollOption();
+        option.setId(5L);
+        option.setOptionText("Blue");
+
+        Vote vote = new Vote();
+        vote.setId(100L);
+        vote.setPoll(poll);
+        vote.setOption(option);
+        vote.setUser(user);
+
+        org.springframework.data.domain.PageImpl<Vote> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(vote));
+
+        when(voteRepository.findByUserIdWithDetails(eq(1L), any()))
+                .thenReturn(page);
+
+        org.springframework.data.domain.Page<UserVoteResponse> result =
+                voteService.getMyVotes(user, 0, 10);
+
+        assertEquals(1, result.getTotalElements());
+        UserVoteResponse response = result.getContent().get(0);
+        assertEquals(100L, response.getVoteId());
+        assertEquals(10L, response.getPollId());
+        assertEquals("Favourite color?", response.getPollQuestion());
+        assertEquals(5L, response.getOptionId());
+        assertEquals("Blue", response.getOptionText());
+    }
+
+    @Test
+    void getMyVotes_EmptyPage() {
+        User user = new User();
+        user.setId(2L);
+
+        when(voteRepository.findByUserIdWithDetails(eq(2L), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        org.springframework.data.domain.Page<UserVoteResponse> result =
+                voteService.getMyVotes(user, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(0, result.getTotalElements());
     }
 }

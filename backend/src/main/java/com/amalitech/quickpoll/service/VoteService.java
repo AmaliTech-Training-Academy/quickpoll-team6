@@ -1,5 +1,8 @@
 package com.amalitech.quickpoll.service;
 
+import com.amalitech.quickpoll.errorhandlers.AlreadyVotedException;
+import com.amalitech.quickpoll.errorhandlers.PollAlreadyClosedException;
+import com.amalitech.quickpoll.dto.UserVoteResponse;
 import com.amalitech.quickpoll.dto.VoteRequest;
 import com.amalitech.quickpoll.dto.VoteResponse;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
@@ -9,6 +12,9 @@ import com.amalitech.quickpoll.model.enums.VoteStatus;
 import com.amalitech.quickpoll.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,16 +36,15 @@ public class VoteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
 
         if (!poll.isActive()) {
-            throw new IllegalStateException("Poll is closed");
+            throw new PollAlreadyClosedException("Poll is closed and no longer accepting votes");
         }
 
-        // Check if user is invited to this poll
         PollInvite pollInvite = pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())
                 .orElseThrow(() -> new AccessDeniedException("You are not invited to vote on this poll"));
 
         // Check if user has already voted
         if (pollInvite.getVoteStatus() == VoteStatus.VOTED) {
-            throw new IllegalStateException("You have already voted on this poll");
+            throw new AlreadyVotedException("You have already voted on this poll");
         }
 
         if (request.getOptionIds().size() > poll.getMaxSelections()) {
@@ -75,5 +80,18 @@ public class VoteService {
         savedVotes.forEach(vote -> eventPublisher.publishEvent(new VoteCastDomainEvent(vote)));
 
         return new VoteResponse(true, "Vote cast successfully");
+    }
+
+    public Page<UserVoteResponse> getMyVotes(User user, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return voteRepository.findByUserIdWithDetails(user.getId(), pageable)
+                .map(vote -> UserVoteResponse.builder()
+                        .voteId(vote.getId())
+                        .pollId(vote.getPoll().getId())
+                        .pollQuestion(vote.getPoll().getQuestion())
+                        .optionId(vote.getOption().getId())
+                        .optionText(vote.getOption().getOptionText())
+                        .votedAt(vote.getCreatedAt())
+                        .build());
     }
 }

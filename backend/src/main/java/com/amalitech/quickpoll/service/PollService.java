@@ -2,6 +2,7 @@ package com.amalitech.quickpoll.service;
 
 import com.amalitech.quickpoll.dto.*;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
+import com.amalitech.quickpoll.errorhandlers.PollAlreadyClosedException;
 import com.amalitech.quickpoll.event.PollClosedDomainEvent;
 import com.amalitech.quickpoll.event.PollCreatedDomainEvent;
 import com.amalitech.quickpoll.mapper.PollMapper;
@@ -74,6 +75,8 @@ public class PollService {
     public PollResponse getPollById(Long id) {
         Poll poll = pollRepository.findByIdWithOptions(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
+        pollRepository.findByIdWithInvites(id)
+                .ifPresent(p -> poll.setInvites(p.getInvites()));
         return toResponse(poll);
     }
 
@@ -130,7 +133,7 @@ public class PollService {
         }
 
         if (!poll.isActive()) {
-            throw new IllegalStateException("Poll is already closed");
+            throw new PollAlreadyClosedException("Poll is already closed");
         }
 
         poll.setActive(false);
@@ -156,6 +159,8 @@ public class PollService {
     public PollResponse getPollResults(Long pollId, User user) {
         Poll poll = pollRepository.findByIdWithOptions(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
+        pollRepository.findByIdWithInvites(pollId)
+                .ifPresent(p -> poll.setInvites(p.getInvites()));
 
         if (!poll.getCreator().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the creator or admin can view poll results");

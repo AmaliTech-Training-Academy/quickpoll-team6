@@ -19,8 +19,11 @@ public interface PollRepository extends JpaRepository<Poll, Long> {
     @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator ORDER BY p.createdAt DESC")
     List<Poll> findAllWithOptions();
 
-    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator LEFT JOIN FETCH p.invites i LEFT JOIN FETCH i.departmentMember dm LEFT JOIN FETCH dm.department WHERE p.id = :id")
+    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id = :id")
     Optional<Poll> findByIdWithOptions(@Param("id") Long id);
+
+    @Query("SELECT p FROM Poll p LEFT JOIN FETCH p.invites i LEFT JOIN FETCH i.departmentMember dm LEFT JOIN FETCH dm.department WHERE p.id = :id")
+    Optional<Poll> findByIdWithInvites(@Param("id") Long id);
 
     @Query("SELECT DISTINCT p FROM Poll p LEFT JOIN FETCH p.options LEFT JOIN FETCH p.creator WHERE p.id IN :ids")
     List<Poll> findAllByIdInWithOptions(@Param("ids") List<Long> ids);
