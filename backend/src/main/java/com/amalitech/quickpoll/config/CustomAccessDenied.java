@@ -34,3 +34,4 @@ public class CustomAccessDenied implements AccessDeniedHandler {
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 }
+

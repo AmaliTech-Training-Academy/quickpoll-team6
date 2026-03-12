@@ -84,17 +84,17 @@ public class CustomExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
-        ErrorResponse error = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.FORBIDDEN.value(),
-                "Forbidden",
-                "You don't have permission to access this resource",
-                request.getDescription(false).replace("uri=", "")
-        );
-        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
-    }
+   @ExceptionHandler(AccessDeniedException.class)
+   public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
+       ErrorResponse error = new ErrorResponse(
+               LocalDateTime.now(),
+               HttpStatus.FORBIDDEN.value(),
+               "Forbidden",
+               "You don't have permission to access this resource",
+               request.getDescription(false).replace("uri=", "")
+       );
+       return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+   }
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException ex, WebRequest request) {

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,8 +36,39 @@ public class PollService {
         Pageable pageable = PageRequest.of(page, size);
         Page<Poll> polls = pollRepository.findAllByOrderByCreatedAtDesc(pageable);
         List<Long> pollIds = polls.getContent().stream().map(Poll::getId).toList();
+
         List<Poll> pollsWithOptions = pollRepository.findAllByIdInWithOptions(pollIds);
-        return new PageImpl<>(pollsWithOptions.stream().map(this::toResponse).toList(), pageable, polls.getTotalElements());
+
+        // Batch-fetch invites (with departmentMember + department) to avoid N+1
+        List<Poll> pollsWithInvites = pollRepository.findAllByIdInWithInvites(pollIds);
+        Map<Long, List<PollInvite>> invitesByPollId = pollsWithInvites.stream()
+                .collect(java.util.stream.Collectors.toMap(Poll::getId, Poll::getInvites));
+
+        pollsWithOptions.forEach(p -> p.setInvites(invitesByPollId.getOrDefault(p.getId(), List.of())));
+
+        return new PageImpl<>(pollsWithOptions.stream().map(this::toResponse).toList(), pageable,
+                polls.getTotalElements());
+    }
+
+    public Page<PollResponse> getMyCreatedPolls(User creator, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Poll> polls = pollRepository.findByCreatorOrderByCreatedAtDesc(creator, pageable);
+        List<Long> pollIds = polls.getContent().stream().map(Poll::getId).toList();
+
+        if (pollIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Poll> pollsWithOptions = pollRepository.findAllByIdInWithOptions(pollIds);
+
+        List<Poll> pollsWithInvites = pollRepository.findAllByIdInWithInvites(pollIds);
+        Map<Long, List<PollInvite>> invitesByPollId = pollsWithInvites.stream()
+                .collect(java.util.stream.Collectors.toMap(Poll::getId, Poll::getInvites));
+
+        pollsWithOptions.forEach(p -> p.setInvites(invitesByPollId.getOrDefault(p.getId(), List.of())));
+
+        return new PageImpl<>(pollsWithOptions.stream().map(this::toResponse).toList(), pageable,
+                polls.getTotalElements());
     }
 
     public PollResponse getPollById(Long id) {
@@ -51,7 +83,7 @@ public class PollService {
         if (request.getMaxSelections() < 1) {
             throw new IllegalArgumentException("Maximum selections must be at least 1");
         }
-        
+
         Poll poll = pollMapper.toEntity(request, creator);
         log.info("Creating poll: {}", poll);
         Poll savedPoll = pollRepository.save(poll);
@@ -81,7 +113,8 @@ public class PollService {
                         .build())
                 .toList();
         log.info("Created {} poll invites", invites.size());
-        pollInviteRepository.saveAll(invites);
+        List<PollInvite> savedInvites = pollInviteRepository.saveAll(invites);
+        savedPoll.setInvites(savedInvites);
 
         eventPublisher.publishEvent(new PollCreatedDomainEvent(savedPoll));
 
@@ -102,9 +135,9 @@ public class PollService {
 
         poll.setActive(false);
         Poll closedPoll = pollRepository.save(poll);
-        
+
         eventPublisher.publishEvent(new PollClosedDomainEvent(closedPoll));
-        
+
         return toResponse(closedPoll);
     }
 
@@ -123,18 +156,33 @@ public class PollService {
     public PollResponse getPollResults(Long pollId, User user) {
         Poll poll = pollRepository.findByIdWithOptions(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Poll not found"));
-        
+
         if (!poll.getCreator().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
             throw new AccessDeniedException("Only the creator or admin can view poll results");
         }
-        
+
         return toResponse(poll);
     }
 
     public Page<PollBasicResponse> getEntitledPolls(String email, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return pollRepository.findEntitledPollsByEmail(email, pageable)
-                .map(this::toBasicResponse);
+        Page<Poll> polls = pollRepository.findEntitledPollsByEmail(email, pageable);
+        List<Long> pollIds = polls.getContent().stream().map(Poll::getId).toList();
+
+        if (pollIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Poll> pollsWithOptions = pollRepository.findAllByIdInWithOptions(pollIds);
+
+        List<Poll> pollsWithInvites = pollRepository.findAllByIdInWithInvites(pollIds);
+        Map<Long, List<PollInvite>> invitesByPollId = pollsWithInvites.stream()
+                .collect(java.util.stream.Collectors.toMap(Poll::getId, Poll::getInvites));
+
+        pollsWithOptions.forEach(p -> p.setInvites(invitesByPollId.getOrDefault(p.getId(), List.of())));
+
+        return new PageImpl<>(pollsWithOptions.stream().map(this::toBasicResponse).toList(), pageable,
+                polls.getTotalElements());
     }
 
     private PollResponse toResponse(Poll poll) {
@@ -149,9 +197,15 @@ public class PollService {
             return response;
         }).toList();
 
+        List<String> invitedDepartments = poll.getInvites().stream()
+                .map(invite -> invite.getDepartmentMember().getDepartment().getName())
+                .distinct()
+                .toList();
+
         PollResponse response = pollMapper.toResponse(poll);
         response.setTotalVotes(totalVotes);
         response.setOptions(optionResponses);
+        response.setInvitedDepartments(invitedDepartments);
         return response;
     }
 
@@ -164,6 +218,7 @@ public class PollService {
         response.setId(poll.getId());
         response.setQuestion(poll.getQuestion());
         response.setDescription(poll.getDescription());
+        response.setCreatorEmail(poll.getCreator().getEmail());
         response.setCreatorName(poll.getCreator().getFullName());
         response.setMaxSelections(poll.getMaxSelections());
         response.setExpiresAt(poll.getExpiresAt());

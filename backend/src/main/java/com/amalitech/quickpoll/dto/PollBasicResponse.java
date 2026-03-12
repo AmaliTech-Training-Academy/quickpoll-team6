@@ -9,6 +9,7 @@ public class PollBasicResponse {
     private Long id;
     private String question;
     private String description;
+    private String creatorEmail;
     private String creatorName;
     private Integer maxSelections;
     private LocalDateTime expiresAt;

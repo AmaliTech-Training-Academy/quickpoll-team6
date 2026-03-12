@@ -11,11 +11,13 @@ import org.mapstruct.Mapping;
 public interface PollMapper {
     
     @Mapping(target = "question", source = "poll.question")
+    @Mapping(target = "creatorEmail", source = "creator.email")
     @Mapping(target = "creatorName", source = "creator.fullName")
     @Mapping(target = "status", expression = "java(poll.isActive() ? \"ACTIVE\" : \"CLOSED\")")
     @Mapping(target = "maxSelections", source = "maxSelections")
     @Mapping(target = "options", ignore = true)
     @Mapping(target = "totalVotes", ignore = true)
+    @Mapping(target = "invitedDepartments", ignore = true)
     PollResponse toResponse(Poll poll);
 
     @Mapping(target = "id", ignore = true)
