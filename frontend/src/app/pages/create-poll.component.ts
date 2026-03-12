@@ -1,5 +1,10 @@
-import { Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   CdkDrag,
   CdkDragDrop,
@@ -8,16 +13,17 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import { PollService } from '@/services/poll.service';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { NgpDialogTrigger } from 'ng-primitives/dialog';
+import { Router } from '@angular/router';
 import {
   hugeAdd01,
   hugeAlertCircle,
   hugeCancel01,
   hugeDragDropVertical,
 } from '@ng-icons/huge-icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { NgpDialogTrigger } from 'ng-primitives/dialog';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PollService } from '@/services/poll.service';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 import { TextareaComponent } from '@/components/ui/primitives/textarea.component';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
@@ -191,7 +197,7 @@ type PollAudience = 'company-wide' | 'department';
                       [value]="getOptions()[i]"
                       (input)="updateOption(i, $event)"
                       placeholder="Enter option title"
-                      class="flex-1 rounded-md!"
+                      class="flex-1 rounded!"
                       required
                       [attr.data-test-id]="'create-poll-option-input-' + i"
                     />
@@ -451,9 +457,14 @@ type PollAudience = 'company-wide' | 'department';
             type="button"
             variant="primary"
             (click)="close(); submitPoll()"
+            [disabled]="isSubmitting()"
             data-test-id="create-poll-confirm-button"
           >
-            Confirm
+            @if (isSubmitting()) {
+              Creating...
+            } @else {
+              Confirm
+            }
           </button>
         </div>
       </app-dialog>
@@ -504,6 +515,7 @@ export class CreatePollComponent {
   protected error = '';
   protected selectedDepartmentNames: string[] = [];
   protected multipleSelectionsEnabled = false;
+  protected readonly isSubmitting = signal(false);
 
   getOptions(): string[] {
     return this.newPollForm.controls.options.value ?? ['', ''];
@@ -705,6 +717,8 @@ export class CreatePollComponent {
       return;
     }
 
+    this.isSubmitting.set(true);
+
     this.newPollForm.controls.question.setValue(trimmedQuestion);
     this.newPollForm.controls.expiresAt.setValue(expiresAt ?? '');
     this.newPollForm.controls.options.setValue(validOptions);
@@ -729,6 +743,7 @@ export class CreatePollComponent {
       .subscribe({
         next: (res: any) => this.router.navigate(['/~/polls', res.id]),
         error: () => {
+          this.isSubmitting.set(false);
           this.error = 'Failed to create poll. Please try again.';
           this.cdr.markForCheck();
         },

@@ -1,39 +1,42 @@
-import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  inject,
+  input,
+  OnInit,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeView, hugeSquareLock02 } from '@ng-icons/huge-icons';
+import { hugeView, hugeSquareLock02, hugeUser } from '@ng-icons/huge-icons';
+import { User } from '@/models';
+import { AuthService } from '@/services/auth.service';
 import { ButtonComponent } from './primitives/button.component';
 
 type PollOption = {
-  id: string | number;
-  text?: string;
-  option_text?: string;
-  percentage: number;
+  id: number;
+  text: string;
 };
 
 type Poll = {
-  // TODO
-  id: string | number;
+  id: number;
   question: string;
-  description?: string | null;
-  creatorName?: string | null;
-  creator_name?: string | null;
-  totalVotes?: number | null;
-  total_votes?: number | null;
+  description?: string;
+  creatorName?: string;
+  creatorEmail: string;
+  maxSelections: number;
+  expiresAt: string;
+  status: string;
+  createdAt: string;
   options: PollOption[];
-  departmentId?: number | null;
-  department_id?: number | null;
-  departmentName?: string | null;
-  department_name?: string | null;
-  department?: { id?: number | null; name?: string | null } | string | null;
 };
 
 @Component({
   selector: 'app-poll-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, ButtonComponent, NgIcon, RouterLink],
-  providers: [provideIcons({ hugeView, hugeSquareLock02 })],
+  imports: [ButtonComponent, NgIcon, RouterLink],
+  providers: [provideIcons({ hugeView, hugeSquareLock02, hugeUser })],
   template: `
     <div
       class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6"
@@ -41,40 +44,42 @@ type Poll = {
     >
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
+          <div class="flex items-center gap-1 mb-2">
+            <div class="rounded-full bg-secondary border size-6 grid place-items-center">
+              <ng-icon name="hugeUser" size="14px" />
+            </div>
+            <p class="text-xs text-muted-foreground flex items-center">
+              {{ creatorLabel() }}
+              @if (userIsOwner()) {
+                <span class="px-1 py-0.5 ml-1 rounded-md bg-muted">me</span>
+              }
+            </p>
+          </div>
           <h2>
-            <a
-              [routerLink]="['/~/polls', poll().id]"
-              class="text-base font-medium text-foreground transition-colors hover:underline"
-              [attr.data-test-id]="'poll-card-details-link-' + poll().id"
-            >
-              {{ poll().question }}
-            </a>
+            @if (userIsOwner()) {
+              <a
+                [routerLink]="['/~/polls', poll().id]"
+                class="text-base font-medium text-foreground transition-colors hover:underline"
+                [attr.data-test-id]="'poll-card-details-link-' + poll().id"
+              >
+                {{ poll().question }}
+              </a>
+            } @else {
+              <p
+                class="text-base font-medium text-foreground"
+                [attr.data-test-id]="'poll-title-text-' + poll().id"
+              >
+                {{ poll().question }}
+              </p>
+            }
           </h2>
 
           @if (poll().description) {
             <p class="mt-1 text-sm text-muted-foreground">{{ poll().description }}</p>
           }
-
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <p class="text-xs text-muted-foreground">
-              by {{ creatorLabel() }} &bull; {{ totalVotesLabel() }} votes
-            </p>
-
-            <span
-              class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none"
-              [class.border-border]="!isDepartmentAudience()"
-              [class.text-muted-foreground]="!isDepartmentAudience()"
-              [class.bg-muted/30]="!isDepartmentAudience()"
-              [class.border-primary/20]="isDepartmentAudience()"
-              [class.text-primary]="isDepartmentAudience()"
-              [class.bg-primary/5]="isDepartmentAudience()"
-            >
-              {{ audienceLabel() }}
-            </span>
-          </div>
         </div>
 
-        <div class="flex items-center gap-2 md:shrink-0">
+        @if (userIsOwner()) {
           <button
             app-button
             type="button"
@@ -83,103 +88,56 @@ type Poll = {
             class="size-9! p-0! rounded-lg!"
             aria-label="View results"
             title="View results"
+            [routerLink]="['/~/polls', poll().id]"
             [attr.data-test-id]="'poll-card-view-results-button-' + poll().id"
           >
             <ng-icon name="hugeView" />
           </button>
-          <button
-            app-button
-            type="button"
-            variant="outline"
-            size="md"
-            class="size-9! p-0! rounded-lg!"
-            aria-label="Close poll"
-            title="Close poll"
-            [attr.data-test-id]="'poll-card-close-button-' + poll().id"
-          >
-            <ng-icon name="hugeSquareLock02" />
-          </button>
-        </div>
+        }
       </div>
 
       <ul class="mt-4 space-y-3" [attr.data-test-id]="'poll-card-options-list-' + poll().id">
         @for (opt of poll().options; track opt.id) {
-          <li
-            class="rounded-lg border border-border/60 bg-muted/30 p-3"
-            [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id"
-          >
-            <div class="mb-2 flex items-center justify-between gap-3 text-xs">
+          <li [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id">
+            <button
+              app-button
+              variant="outline"
+              class="gap-3 text-xs w-full justify-start! font-normal!"
+            >
               <span class="text-foreground">{{ optionLabel(opt) }}</span>
-              <span class="text-muted-foreground">{{ opt.percentage | number: '1.0-1' }}%</span>
-            </div>
-            <div class="h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                class="h-full rounded-full bg-primary transition-all"
-                [style.width.%]="opt.percentage"
-              ></div>
-            </div>
+            </button>
           </li>
         }
       </ul>
     </div>
   `,
 })
-export class PollCardComponent {
+export class PollCardComponent implements OnInit {
   readonly poll = input.required<Poll>();
-
-  protected readonly departmentName = computed(() => {
-    const poll = this.poll();
-
-    if (typeof poll.department === 'object' && poll.department) {
-      return poll.department.name?.trim() || null;
-    }
-
-    if (typeof poll.department === 'string') {
-      return poll.department.trim() || null;
-    }
-
-    return poll.departmentName?.trim() || poll.department_name?.trim() || null;
-  });
-
-  protected readonly hasDepartmentId = computed(() => {
-    const poll = this.poll();
-
-    if (typeof poll.department === 'object' && poll.department?.id != null) {
-      return true;
-    }
-
-    return poll.departmentId != null || poll.department_id != null;
-  });
-
-  protected readonly isDepartmentAudience = computed(
-    () => this.departmentName() !== null || this.hasDepartmentId(),
-  );
-
-  protected readonly audienceLabel = computed(() => {
-    const departmentName = this.departmentName();
-
-    if (departmentName) {
-      return departmentName;
-    }
-
-    if (this.hasDepartmentId()) {
-      return 'Department';
-    }
-
-    return 'Company-wide';
-  });
+  currentUser: User | null = null;
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   protected readonly creatorLabel = computed(() => {
     const poll = this.poll();
-    return poll.creatorName || poll.creator_name || 'Unknown';
-  });
-
-  protected readonly totalVotesLabel = computed(() => {
-    const poll = this.poll();
-    return poll.totalVotes ?? poll.total_votes ?? 0;
+    return poll.creatorName;
   });
 
   protected optionLabel(option: PollOption): string {
-    return option.text ?? option.option_text ?? '';
+    return option.text;
+  }
+
+  protected userIsOwner = computed(() => {
+    const poll = this.poll();
+    return poll.creatorEmail === this.currentUser?.email;
+  });
+
+  ngOnInit() {
+    this.authService.getProfile().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.cdr.markForCheck();
+      },
+    });
   }
 }

@@ -212,8 +212,13 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
           data-test-id="register-submit-button"
           (click)="registerForm.markAllAsTouched()"
           class="rounded-full!"
+          [disabled]="loading()"
         >
-          Register
+          @if (loading()) {
+            Registering...
+          } @else {
+            Register
+          }
         </button>
       </form>
       <div class="mt-6 text-center text-xs inline-flex items-center justify-center gap-1">
@@ -231,6 +236,7 @@ export class RegisterComponent implements OnInit {
 
   protected readonly departments = signal<Department[]>([]);
   protected readonly departmentsError = signal<string | null>(null);
+  protected readonly loading = signal(false);
 
   protected readonly departmentNames = () => this.departments().map((d) => d.name);
 
@@ -277,13 +283,18 @@ export class RegisterComponent implements OnInit {
   onSubmit(): void {
     if (this.registerForm.invalid) return;
 
+    this.loading.set(true);
+
     const { firstName, lastName, email, password, department } = this.registerForm.value;
     const name = `${firstName!.trim()} ${lastName!.trim()}`;
     const deptId = department ?? undefined;
 
     this.authService.register(name, email!, password!, deptId).subscribe({
       next: () => this.router.navigateByUrl('/~/polls'),
-      error: () => (this.error = 'Registration failed. Please try again.'),
+      error: () => {
+        this.error = 'Registration failed. Please try again.';
+        this.loading.set(false);
+      },
     });
   }
 }
