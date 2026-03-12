@@ -12,7 +12,8 @@ type PollOption = {
   percentage: number;
 };
 
-type Poll = { // TODO
+type Poll = {
+  // TODO
   id: string | number;
   question: string;
   description?: string | null;
@@ -34,13 +35,17 @@ type Poll = { // TODO
   imports: [DecimalPipe, ButtonComponent, NgIcon, RouterLink],
   providers: [provideIcons({ hugeView, hugeSquareLock02 })],
   template: `
-    <div class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6">
+    <div
+      class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6"
+      [attr.data-test-id]="'poll-card-' + poll().id"
+    >
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h2>
             <a
               [routerLink]="['/~/polls', poll().id]"
               class="text-base font-medium text-foreground transition-colors hover:underline"
+              [attr.data-test-id]="'poll-card-details-link-' + poll().id"
             >
               {{ poll().question }}
             </a>
@@ -78,6 +83,7 @@ type Poll = { // TODO
             class="size-9! p-0! rounded-lg!"
             aria-label="View results"
             title="View results"
+            [attr.data-test-id]="'poll-card-view-results-button-' + poll().id"
           >
             <ng-icon name="hugeView" />
           </button>
@@ -89,15 +95,19 @@ type Poll = { // TODO
             class="size-9! p-0! rounded-lg!"
             aria-label="Close poll"
             title="Close poll"
+            [attr.data-test-id]="'poll-card-close-button-' + poll().id"
           >
             <ng-icon name="hugeSquareLock02" />
           </button>
         </div>
       </div>
 
-      <ul class="mt-4 space-y-3">
+      <ul class="mt-4 space-y-3" [attr.data-test-id]="'poll-card-options-list-' + poll().id">
         @for (opt of poll().options; track opt.id) {
-          <li class="rounded-lg border border-border/60 bg-muted/30 p-3">
+          <li
+            class="rounded-lg border border-border/60 bg-muted/30 p-3"
+            [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id"
+          >
             <div class="mb-2 flex items-center justify-between gap-3 text-xs">
               <span class="text-foreground">{{ optionLabel(opt) }}</span>
               <span class="text-muted-foreground">{{ opt.percentage | number: '1.0-1' }}%</span>

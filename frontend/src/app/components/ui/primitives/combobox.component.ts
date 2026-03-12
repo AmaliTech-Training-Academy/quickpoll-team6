@@ -41,6 +41,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
       (ngpComboboxOpenChange)="resetOnClose($event)"
       (ngpComboboxValueChange)="onValueChange($event)"
       ngpCombobox
+      data-test-id="combobox"
     >
       <input
         [value]="filter()"
@@ -48,19 +49,24 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
         (input)="onFilterChange($event)"
         (blur)="onTouched?.()"
         ngpComboboxInput
+        data-test-id="combobox-input"
       />
 
-      <button ngpComboboxButton aria-label="Toggle dropdown">
+      <button ngpComboboxButton aria-label="Toggle dropdown" data-test-id="combobox-toggle-button">
         <ng-icon name="hugeArrowDown01" />
       </button>
 
-      <div *ngpComboboxPortal ngpComboboxDropdown>
+      <div *ngpComboboxPortal ngpComboboxDropdown data-test-id="combobox-dropdown">
         @for (option of filteredOptions(); track option) {
-          <div [ngpComboboxOptionValue]="option" ngpComboboxOption>
+          <div
+            [ngpComboboxOptionValue]="option"
+            ngpComboboxOption
+            [attr.data-test-id]="'combobox-option-' + option.toLowerCase().replaceAll(' ', '-')"
+          >
             {{ option }}
           </div>
         } @empty {
-          <div class="empty-message">No options found</div>
+          <div class="empty-message" data-test-id="combobox-empty-message">No options found</div>
         }
       </div>
     </div>

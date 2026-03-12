@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor } from '@angular/forms';
 import { injectSwitchState, NgpSwitch, NgpSwitchThumb } from 'ng-primitives/switch';
@@ -15,7 +15,7 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
     },
   ],
   imports: [NgpSwitchThumb],
-  template: ` <span ngpSwitchThumb></span> `,
+  template: ` <span ngpSwitchThumb [attr.data-test-id]="thumbTestId()"></span> `,
   styles: `
     :host {
       display: inline-flex;
@@ -73,9 +73,15 @@ import { ChangeFn, provideValueAccessor, TouchedFn } from 'ng-primitives/utils';
   providers: [provideValueAccessor(SwitchComponent)],
   host: {
     '(focusout)': 'onTouched?.()',
+    '[attr.data-test-id]': 'testId()',
   },
 })
 export class SwitchComponent implements ControlValueAccessor {
+  /** The test id for the switch host. */
+  readonly testId = input('switch');
+
+  /** The test id for the switch thumb. */
+  readonly thumbTestId = input('switch-thumb');
   /** Access the switch state. */
   private readonly switch = injectSwitchState();
 

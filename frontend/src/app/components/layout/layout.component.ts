@@ -33,15 +33,39 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
       >
         <header class="p-3 pb-0 gap-3 w-full flex flex-col maxview-container">
           <div class="flex items-center justify-between gap-3 p-1">
-            <app-department-indicator />
+            <div>
+              <svg
+                width="512"
+                height="512"
+                viewBox="0 0 512 512"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect width="512" height="512" rx="24" fill="#36AB90" />
+
+                <rect x="78" y="127" width="96" height="340" rx="16" fill="#A2F0E1" />
+
+                <rect x="208" y="246" width="96" height="221" rx="16" fill="#D9FCF5" />
+
+                <rect x="338" y="96" width="96" height="371" rx="16" fill="#93DFD0" />
+              </svg>
+              <app-department-indicator />
+            </div>
             <div class="flex items-center gap-2">
               <app-user-menu />
             </div>
           </div>
-          <nav #navElement class="relative flex gap-1 items-center pb-2">
+          <nav
+            #navElement
+            class="relative flex gap-1 items-center pb-2"
+            data-test-id="app-primary-nav"
+          >
             @for (link of navLinks; track link.path) {
               <button
                 data-nav-link
+                [attr.data-test-id]="
+                  link.label === 'Polls' ? 'app-nav-polls-button' : 'app-nav-account-button'
+                "
                 [routerLink]="link.path"
                 routerLinkActive="active"
                 app-button

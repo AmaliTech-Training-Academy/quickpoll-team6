@@ -51,10 +51,11 @@ type PollAudience = 'company-wide' | 'department';
   template: `
     <app-content-header pageTitle="Create Poll" />
 
-    <div class="maxview-container lg:max-w-4xl p-5">
+    <div class="maxview-container lg:max-w-4xl p-5" data-test-id="create-poll-page">
       @if (error) {
         <div
           class="mb-5 flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3"
+          data-test-id="create-poll-error-message"
         >
           <ng-icon
             name="hugeAlertCircle"
@@ -66,7 +67,12 @@ type PollAudience = 'company-wide' | 'department';
         </div>
       }
 
-      <form id="create-poll-form" [formGroup]="newPollForm" class="flex flex-col gap-5">
+      <form
+        id="create-poll-form"
+        [formGroup]="newPollForm"
+        class="flex flex-col gap-5"
+        data-test-id="create-poll-form"
+      >
         <div class="grid gap-5">
           <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
             <div class="flex flex-col gap-6">
@@ -79,11 +85,17 @@ type PollAudience = 'company-wide' | 'department';
                   formControlName="question"
                   placeholder="What would you like to ask?"
                   required
+                  data-test-id="create-poll-question-input"
                 />
                 @if (
                   newPollForm.controls.question.touched && newPollForm.controls.question.errors
                 ) {
-                  <div class="form-field-error" role="alert" aria-live="assertive">
+                  <div
+                    class="form-field-error"
+                    role="alert"
+                    aria-live="assertive"
+                    data-test-id="create-poll-question-error-message"
+                  >
                     @if (newPollForm.controls.question.errors['required']) {
                       <span>Please type a question.</span>
                     }
@@ -101,6 +113,7 @@ type PollAudience = 'company-wide' | 'department';
                   formControlName="description"
                   rows="3"
                   placeholder="Add more context for voters"
+                  data-test-id="create-poll-description-input"
                 ></textarea>
               </div>
 
@@ -114,56 +127,23 @@ type PollAudience = 'company-wide' | 'department';
                   type="datetime-local"
                   formControlName="expiresAt"
                   required
+                  data-test-id="create-poll-expiry-input"
                 />
                 @if (
                   newPollForm.controls.expiresAt.touched && newPollForm.controls.expiresAt.errors
                 ) {
-                  <div class="form-field-error" role="alert" aria-live="assertive">
+                  <div
+                    class="form-field-error"
+                    role="alert"
+                    aria-live="assertive"
+                    data-test-id="create-poll-expiry-error-message"
+                  >
                     @if (newPollForm.controls.expiresAt.errors['required']) {
                       <span>Please choose an expiry date and time.</span>
                     }
                   </div>
                 }
               </div>
-            </div>
-          </div>
-
-          <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
-            <div class="flex flex-col gap-4">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex flex-col gap-1">
-                  <h2 class="text-base font-medium text-foreground">Allow multiple selections</h2>
-                  <p class="text-sm text-muted-foreground">
-                    Let voters choose more than one option for this poll.
-                  </p>
-                </div>
-
-                <app-switch
-                  [checked]="allowsMultipleSelections()"
-                  (checkedChange)="onAllowMultipleSelectionsChange($event)"
-                />
-              </div>
-
-              @if (allowsMultipleSelections()) {
-                <div class="flex flex-col gap-2 sm:max-w-xs">
-                  <label for="maxSelections" class="text-sm font-medium text-foreground">
-                    Maximum selections
-                  </label>
-                  <input
-                    id="maxSelections"
-                    app-input
-                    type="number"
-                    min="1"
-                    [max]="validOptionCount() || getOptions().length"
-                    [value]="newPollForm.controls.maxSelections.value ?? ''"
-                    (input)="onMaxSelectionsInput($event)"
-                    placeholder="Leave blank to match the number of options"
-                  />
-                  <p class="text-xs text-muted-foreground">
-                    Leave this blank to match the number of options
-                  </p>
-                </div>
-              }
             </div>
           </div>
 
@@ -181,11 +161,13 @@ type PollAudience = 'company-wide' | 'department';
                 [cdkDropListData]="getOptions()"
                 class="flex flex-col gap-3 pt-2"
                 (cdkDropListDropped)="dropOption($event)"
+                data-test-id="create-poll-options-list"
               >
                 @for (opt of getOptions(); track $index; let i = $index) {
                   <div
                     cdkDrag
                     class="flex items-center gap-1 rounded-lg border bg-muted/20 p-1 cdk-option-row"
+                    [attr.data-test-id]="'create-poll-option-row-' + i"
                   >
                     <div
                       *cdkDragPlaceholder
@@ -197,6 +179,7 @@ type PollAudience = 'company-wide' | 'department';
                       cdkDragHandle
                       class="inline-flex h-10 w-8 items-center justify-center rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
                       aria-label="Reorder option"
+                      [attr.data-test-id]="'create-poll-option-reorder-button-' + i"
                     >
                       <ng-icon name="hugeDragDropVertical" />
                     </button>
@@ -210,6 +193,7 @@ type PollAudience = 'company-wide' | 'department';
                       placeholder="Enter option title"
                       class="flex-1 rounded-md!"
                       required
+                      [attr.data-test-id]="'create-poll-option-input-' + i"
                     />
 
                     <button
@@ -221,6 +205,7 @@ type PollAudience = 'company-wide' | 'department';
                       aria-label="Remove option"
                       [disabled]="getOptions().length <= 2"
                       (click)="removeOption(i)"
+                      [attr.data-test-id]="'create-poll-option-remove-button-' + i"
                     >
                       <ng-icon name="hugeCancel01" />
                     </button>
@@ -229,7 +214,12 @@ type PollAudience = 'company-wide' | 'department';
               </div>
 
               @if (newPollForm.controls.options.touched && newPollForm.controls.options.errors) {
-                <div class="form-field-error" role="alert" aria-live="assertive">
+                <div
+                  class="form-field-error"
+                  role="alert"
+                  aria-live="assertive"
+                  data-test-id="create-poll-options-error-message"
+                >
                   @if (newPollForm.controls.options.errors['minOptions']) {
                     <span>At least 2 options are required.</span>
                   }
@@ -240,11 +230,58 @@ type PollAudience = 'company-wide' | 'department';
               }
 
               <div class="flex justify-end">
-                <button app-button type="button" variant="outline" (click)="addOption()">
+                <button
+                  app-button
+                  type="button"
+                  variant="outline"
+                  (click)="addOption()"
+                  data-test-id="create-poll-add-option-button"
+                >
                   <ng-icon name="hugeAdd01" />
                   Add Option
                 </button>
               </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl border bg-surface p-5 shadow-xs sm:p-6">
+            <div class="flex flex-col gap-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-base font-medium text-foreground">Allow multiple selections</h2>
+                  <p class="text-sm text-muted-foreground">
+                    Let voters choose more than one option for this poll.
+                  </p>
+                </div>
+
+                <app-switch
+                  [checked]="allowsMultipleSelections()"
+                  (checkedChange)="onAllowMultipleSelectionsChange($event)"
+                  data-test-id="create-poll-multiple-selections-switch"
+                />
+              </div>
+
+              @if (allowsMultipleSelections()) {
+                <div class="flex flex-col gap-2 sm:max-w-xs">
+                  <label for="maxSelections" class="text-sm font-medium text-foreground">
+                    Maximum selections
+                  </label>
+                  <input
+                    id="maxSelections"
+                    app-input
+                    type="number"
+                    min="1"
+                    [max]="validOptionCount() || getOptions().length"
+                    [value]="newPollForm.controls.maxSelections.value ?? ''"
+                    (input)="onMaxSelectionsInput($event)"
+                    placeholder="Leave blank to match the number of options"
+                    data-test-id="create-poll-max-selections-input"
+                  />
+                  <p class="text-xs text-muted-foreground">
+                    Leave this blank to match the number of options
+                  </p>
+                </div>
+              }
             </div>
           </div>
 
@@ -257,7 +294,7 @@ type PollAudience = 'company-wide' | 'department';
                 </p>
               </div>
 
-              <app-switch formControlName="anonymous" />
+              <app-switch formControlName="anonymous" data-test-id="create-poll-anonymous-switch" />
             </div>
           </div>
 
@@ -269,13 +306,19 @@ type PollAudience = 'company-wide' | 'department';
                 [audience]="newPollForm.controls.audience.value ?? 'company-wide'"
                 (audienceChange)="onAudienceChange($event)"
                 (departmentNamesChange)="selectedDepartmentNames = $event"
+                data-test-id="create-poll-department-section"
               />
 
               @if (
                 newPollForm.controls.audience.touched &&
                 newPollForm.controls.audience.errors?.['departmentRequired']
               ) {
-                <div class="form-field-error" role="alert" aria-live="assertive">
+                <div
+                  class="form-field-error"
+                  role="alert"
+                  aria-live="assertive"
+                  data-test-id="create-poll-audience-error-message"
+                >
                   <span>Please select at least one department.</span>
                 </div>
               }
@@ -284,7 +327,13 @@ type PollAudience = 'company-wide' | 'department';
         </div>
 
         <div class="flex justify-end">
-          <button [ngpDialogTrigger]="submitDialog" app-button type="button" class="gap-2">
+          <button
+            [ngpDialogTrigger]="submitDialog"
+            app-button
+            type="button"
+            class="gap-2"
+            data-test-id="create-poll-submit-button"
+          >
             Submit
           </button>
         </div>
@@ -292,7 +341,7 @@ type PollAudience = 'company-wide' | 'department';
     </div>
 
     <ng-template #submitDialog let-close="close">
-      <app-dialog header="Create this poll?">
+      <app-dialog header="Create this poll?" data-test-id="create-poll-confirmation-dialog">
         <div class="space-y-4">
           <p class="text-sm text-muted-foreground">
             Review the details below before submitting your poll.
@@ -371,9 +420,14 @@ type PollAudience = 'company-wide' | 'department';
               <div class="space-y-2">
                 <dt class="font-medium text-foreground">Options</dt>
                 <dd>
-                  <ul class="list-disc space-y-1 pl-5 text-muted-foreground">
+                  <ul
+                    class="list-disc space-y-1 pl-5 text-muted-foreground"
+                    data-test-id="create-poll-confirmation-options-list"
+                  >
                     @for (option of getOptions(); track $index) {
-                      <li>{{ option || 'Untitled option' }}</li>
+                      <li [attr.data-test-id]="'create-poll-confirmation-option-' + $index">
+                        {{ option || 'Untitled option' }}
+                      </li>
                     }
                   </ul>
                 </dd>
@@ -382,9 +436,23 @@ type PollAudience = 'company-wide' | 'department';
           </div>
         </div>
 
-        <div slot="actions" class="justify-between flex">
-          <button app-button type="button" variant="outline" (click)="close()">Cancel</button>
-          <button app-button type="button" variant="primary" (click)="close(); submitPoll()">
+        <div slot="actions" class="justify-between flex" data-test-id="create-poll-dialog-actions">
+          <button
+            app-button
+            type="button"
+            variant="outline"
+            (click)="close()"
+            data-test-id="create-poll-cancel-button"
+          >
+            Cancel
+          </button>
+          <button
+            app-button
+            type="button"
+            variant="primary"
+            (click)="close(); submitPoll()"
+            data-test-id="create-poll-confirm-button"
+          >
             Confirm
           </button>
         </div>

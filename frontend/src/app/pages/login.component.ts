@@ -18,12 +18,17 @@ import { PasswordFieldComponent } from '@/components/ui/primitives/password-fiel
     PasswordFieldComponent,
   ],
   template: `
-    <div class="max-w-100 m-15 mx-auto flex flex-col">
+    <div class="max-w-100 m-15 mx-auto flex flex-col" data-test-id="login-page">
       <h1 class="mb-8 text-xl md:text-3xl font-semibold text-center">Welcome back</h1>
       @if (error) {
-        <p class="text-destructive text-sm mb-8">{{ error }}</p>
+        <p class="text-destructive text-sm mb-8" data-test-id="login-error-message">{{ error }}</p>
       }
-      <form class="flex flex-col gap-5" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <form
+        class="flex flex-col gap-5"
+        [formGroup]="loginForm"
+        (ngSubmit)="onSubmit()"
+        data-test-id="login-form"
+      >
         <div>
           <input
             app-input
@@ -32,9 +37,15 @@ import { PasswordFieldComponent } from '@/components/ui/primitives/password-fiel
             formControlName="email"
             placeholder="Email address"
             required
+            data-test-id="login-email-input"
           />
           @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
-            <div id="email-error" role="alert" aria-live="assertive">
+            <div
+              id="email-error"
+              role="alert"
+              aria-live="assertive"
+              data-test-id="login-email-error-message"
+            >
               @if (loginForm.get('email')?.errors?.['required']) {
                 <span class="form-field-error">Email address is required.</span>
               }
@@ -51,9 +62,15 @@ import { PasswordFieldComponent } from '@/components/ui/primitives/password-fiel
             formControlName="password"
             name="password"
             required
+            data-test-id="login-password-input"
           />
           @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-            <div id="password-error" role="alert" aria-live="assertive">
+            <div
+              id="password-error"
+              role="alert"
+              aria-live="assertive"
+              data-test-id="login-password-error-message"
+            >
               @if (loginForm.get('password')?.errors?.['required']) {
                 <span class="form-field-error">Password is required.</span>
               }
@@ -63,11 +80,21 @@ import { PasswordFieldComponent } from '@/components/ui/primitives/password-fiel
             </div>
           }
         </div>
-        <button app-button variant="primary" type="submit" class="rounded-full!">Continue</button>
+        <button
+          app-button
+          variant="primary"
+          type="submit"
+          class="rounded-full!"
+          data-test-id="login-submit-button"
+        >
+          Continue
+        </button>
       </form>
       <div class="mt-8 text-center text-xs inline-flex items-center justify-center gap-1">
         <p>Don't have an account?</p>
-        <a routerLink="/auth/register" class="font-medium">Register</a>
+        <a routerLink="/auth/register" class="font-medium" data-test-id="login-register-link">
+          Register
+        </a>
       </div>
     </div>
   `,

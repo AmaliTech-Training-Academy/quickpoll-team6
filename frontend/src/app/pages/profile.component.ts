@@ -13,17 +13,50 @@ import { InputComponent } from '@/components/ui/primitives/input.component';
   imports: [ButtonComponent, InputComponent, FormsModule, UserAvatarComponent],
   template: `
     @if (!isLoading()) {
-      <div class="flex max-lg:flex-col gap-16">
+      <div class="flex max-lg:flex-col gap-16" data-test-id="profile-page">
         <div class="flex flex-col gap-5 md:min-w-90">
-          <app-user-avatar class="w-full aspect-square" [name]="user()?.name" size="xl" />
+          <app-user-avatar
+            class="w-full aspect-square"
+            [name]="user()?.name"
+            size="xl"
+            data-test-id="profile-avatar"
+          />
           <div class="flex gap-2">
             @if (isEditing()) {
-              <button app-button variant="primary" (click)="saveEdit()">Save</button>
-              <button app-button variant="outline" (click)="cancelEdit()">Cancel</button>
+              <button
+                app-button
+                variant="primary"
+                (click)="saveEdit()"
+                data-test-id="profile-save-button"
+              >
+                Save
+              </button>
+              <button
+                app-button
+                variant="outline"
+                (click)="cancelEdit()"
+                data-test-id="profile-cancel-button"
+              >
+                Cancel
+              </button>
             } @else {
-              <button app-button variant="primary" (click)="startEdit()">Edit Profile</button>
+              <button
+                app-button
+                variant="primary"
+                (click)="startEdit()"
+                data-test-id="profile-edit-button"
+              >
+                Edit Profile
+              </button>
             }
-            <button app-button variant="destructive" (click)="logout()">Logout</button>
+            <button
+              app-button
+              variant="destructive"
+              (click)="logout()"
+              data-test-id="profile-logout-button"
+            >
+              Logout
+            </button>
           </div>
         </div>
 
@@ -31,20 +64,20 @@ import { InputComponent } from '@/components/ui/primitives/input.component';
           <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
             <p class="text-sm text-muted-foreground font-medium">Name</p>
             @if (isEditing()) {
-              <input app-input [(ngModel)]="editName" />
+              <input app-input [(ngModel)]="editName" data-test-id="profile-name-input" />
             } @else {
-              <p class="text-sm">{{ user()?.name }}</p>
+              <p class="text-sm" data-test-id="profile-name-value">{{ user()?.name }}</p>
             }
           </div>
 
           <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
             <p class="text-sm text-muted-foreground font-medium">Email</p>
-            <p class="text-sm">{{ user()?.email }}</p>
+            <p class="text-sm" data-test-id="profile-email-value">{{ user()?.email }}</p>
           </div>
 
           <div class="border bg-surface flex flex-col gap-2 px-4 py-6 rounded-lg">
             <p class="text-sm text-muted-foreground font-medium">Role</p>
-            <p class="text-sm">{{ user()?.role }}</p>
+            <p class="text-sm" data-test-id="profile-role-value">{{ user()?.role }}</p>
           </div>
         </div>
       </div>

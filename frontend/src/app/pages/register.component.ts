@@ -38,10 +38,11 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
     <div class="max-w-100 m-15 mx-auto flex flex-col">
       <h1 class="mb-8 text-xl md:text-3xl font-semibold text-center">Welcome to Quickpoll</h1>
       @if (error) {
-        <p class="text-destructive text-xs mb-8">{{ error }}</p>
+        <p data-test-id="register-error-alert" class="text-destructive text-xs mb-8">{{ error }}</p>
       }
       <form
         id="register-form"
+        data-test-id="register-form"
         class="flex flex-col gap-5"
         [formGroup]="registerForm"
         (ngSubmit)="onSubmit()"
@@ -54,11 +55,13 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
               name="firstName"
               formControlName="firstName"
               placeholder="First name"
+              data-test-id="register-first-name-input"
               required
             />
             @if (registerForm.get('firstName')?.touched && registerForm.get('firstName')?.invalid) {
               <div
                 id="first-name-error"
+                data-test-id="register-first-name-error-alert"
                 class="form-field-error"
                 role="alert"
                 aria-live="assertive"
@@ -76,10 +79,17 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
               name="lastName"
               formControlName="lastName"
               placeholder="Last name"
+              data-test-id="register-last-name-input"
               required
             />
             @if (registerForm.get('lastName')?.touched && registerForm.get('lastName')?.invalid) {
-              <div id="last-name-error" class="form-field-error" role="alert" aria-live="assertive">
+              <div
+                id="last-name-error"
+                data-test-id="register-last-name-error-alert"
+                class="form-field-error"
+                role="alert"
+                aria-live="assertive"
+              >
                 @if (registerForm.get('lastName')?.errors?.['required']) {
                   <span>Last name is required.</span>
                 }
@@ -95,10 +105,17 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
             name="email"
             formControlName="email"
             placeholder="Email address"
+            data-test-id="register-email-input"
             required
           />
           @if (registerForm.get('email')?.touched && registerForm.get('email')?.invalid) {
-            <div id="email-error" class="form-field-error" role="alert" aria-live="assertive">
+            <div
+              id="email-error"
+              data-test-id="register-email-error-alert"
+              class="form-field-error"
+              role="alert"
+              aria-live="assertive"
+            >
               @if (registerForm.get('email')?.errors?.['required']) {
                 <span>Email address is required.</span>
               }
@@ -114,10 +131,17 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
             name="password"
             formControlName="password"
             placeholder="Password"
+            data-test-id="register-password-input"
             required
           />
           @if (registerForm.get('password')?.touched && registerForm.get('password')?.invalid) {
-            <div id="password-error" class="form-field-error" role="alert" aria-live="assertive">
+            <div
+              id="password-error"
+              data-test-id="register-password-error-alert"
+              class="form-field-error"
+              role="alert"
+              aria-live="assertive"
+            >
               @if (registerForm.get('password')?.errors?.['required']) {
                 <span>Password is required.</span>
               }
@@ -139,6 +163,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
             name="confirmPassword"
             formControlName="confirmPassword"
             placeholder="Confirm password"
+            data-test-id="register-confirm-password-input"
             required
           />
           @if (
@@ -148,6 +173,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
           ) {
             <div
               id="confirm-password-error"
+              data-test-id="register-confirm-password-error-alert"
               class="form-field-error"
               role="alert"
               aria-live="assertive"
@@ -170,16 +196,20 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
             [options]="departmentNames()"
             [value]="selectedDepartmentName()"
             placeholder="Select a department"
+            data-test-id="register-department-combobox"
             (valueChange)="onDepartmentChange($event)"
           />
           @if (departmentsError()) {
-            <p class="text-destructive text-xs mt-1">{{ departmentsError() }}</p>
+            <p data-test-id="register-department-error-alert" class="text-destructive text-xs mt-1">
+              {{ departmentsError() }}
+            </p>
           }
         </div>
 
         <button
           app-button
           type="submit"
+          data-test-id="register-submit-button"
           (click)="registerForm.markAllAsTouched()"
           class="rounded-full!"
         >
@@ -188,7 +218,7 @@ const passwordMatchValidator: ValidatorFn = (group: AbstractControl): Validation
       </form>
       <div class="mt-6 text-center text-xs inline-flex items-center justify-center gap-1">
         <p>Already have an account?</p>
-        <a routerLink="/auth/login" class="font-medium">Login</a>
+        <a routerLink="/auth/login" data-test-id="register-login-link" class="font-medium">Login</a>
       </div>
     </div>
   `,
