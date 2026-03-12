@@ -22,7 +22,14 @@ import {
 } from '@ng-icons/huge-icons';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { NgpDialogTrigger } from 'ng-primitives/dialog';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  ValidationErrors,
+  ValidatorFn,
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { PollService } from '@/services/poll.service';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 import { TextareaComponent } from '@/components/ui/primitives/textarea.component';
@@ -33,6 +40,24 @@ import { DialogComponent } from '@/components/ui/primitives/dialog.component';
 import { PollDepartmentSectionComponent } from '@/components/ui/poll-department-section.component';
 
 type PollAudience = 'company-wide' | 'department';
+
+function maxSelectionsValidator(getOptions: () => string[]): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value;
+
+    if (value == null) {
+      return null;
+    }
+
+    const optionCount = getOptions().filter((option) => option.trim()).length;
+
+    if (value > optionCount) {
+      return { max: true };
+    }
+
+    return null;
+  };
+}
 
 @Component({
   selector: 'app-create-poll',
@@ -283,16 +308,14 @@ type PollAudience = 'company-wide' | 'department';
                     placeholder="Leave blank to match the number of options"
                     data-test-id="create-poll-max-selections-input"
                   />
-                  @if (newPollForm.controls.maxSelections.errors) {
+                  @if (newPollForm.controls.maxSelections.errors?.['max']) {
                     <div
                       class="form-field-error"
                       role="alert"
                       aria-live="assertive"
                       data-test-id="create-poll-max-selections-error-message"
                     >
-                      @if (newPollForm.controls.maxSelections.errors['max']) {
-                        <span>Maximum selections cannot exceed the number of options.</span>
-                      }
+                      <span>Maximum selections cannot exceed the number of options.</span>
                     </div>
                   }
                   <p class="text-xs text-muted-foreground">
@@ -529,6 +552,12 @@ export class CreatePollComponent {
   protected multipleSelectionsEnabled = false;
   protected readonly isSubmitting = signal(false);
 
+  constructor() {
+    this.newPollForm.controls.maxSelections.addValidators(
+      maxSelectionsValidator(() => this.getOptions()),
+    );
+  }
+
   getOptions(): string[] {
     return this.newPollForm.controls.options.value ?? ['', ''];
   }
@@ -573,7 +602,9 @@ export class CreatePollComponent {
     const input = event.target as HTMLInputElement;
     const options = [...this.getOptions()];
     options[index] = input.value;
+
     this.newPollForm.controls.options.setValue(options);
+    this.newPollForm.controls.maxSelections.updateValueAndValidity();
   }
 
   onAudienceChange(audience: PollAudience) {
@@ -599,14 +630,21 @@ export class CreatePollComponent {
 
   addOption() {
     const options = this.getOptions();
+
     this.newPollForm.controls.options.setValue([...options, '']);
+    this.newPollForm.controls.maxSelections.updateValueAndValidity();
+
     this.cdr.markForCheck();
   }
 
   dropOption(event: CdkDragDrop<string[]>) {
     const options = [...this.getOptions()];
+
     moveItemInArray(options, event.previousIndex, event.currentIndex);
+
     this.newPollForm.controls.options.setValue(options);
+    this.newPollForm.controls.maxSelections.updateValueAndValidity();
+
     this.cdr.markForCheck();
   }
 
@@ -618,11 +656,13 @@ export class CreatePollComponent {
     }
 
     options.splice(index, 1);
+
     this.newPollForm.controls.options.setValue(options);
+    this.newPollForm.controls.maxSelections.updateValueAndValidity();
 
     if (this.allowsMultipleSelections()) {
       const maxSelections = this.newPollForm.controls.maxSelections.value;
-      const validOptions = options.filter((option: string) => option.trim()).length;
+      const validOptions = options.filter((option) => option.trim()).length;
 
       if (maxSelections != null && validOptions > 0 && maxSelections > validOptions) {
         this.newPollForm.controls.maxSelections.setValue(validOptions);
