@@ -12,6 +12,12 @@ REMOTE_HANDOFF_FILE = PROJECT_ROOT / "docs" / "REMOTE_DB_HANDOFF.md"
 AWS_DEPLOYMENT_GUIDE_FILE = (
     PROJECT_ROOT / "docs" / "AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md"
 )
+BACKEND_DASHBOARD_HANDOFF_FILE = (
+    PROJECT_ROOT / "docs" / "BACKEND_DASHBOARD_IMPLEMENTATION_HANDOFF.md"
+)
+FRONTEND_DASHBOARD_HANDOFF_FILE = (
+    PROJECT_ROOT / "docs" / "FRONTEND_DASHBOARD_ANGULAR_HANDOFF.md"
+)
 
 
 class TestLocalComposeFile:
@@ -91,3 +97,41 @@ class TestAwsDeploymentDocs:
     def test_docs_index_lists_aws_deployment_guide(self) -> None:
         content = DOCS_INDEX_FILE.read_text(encoding="utf-8")
         assert "AWS_FARGATE_RDS_DEPLOYMENT_GUIDE.md" in content
+
+
+class TestDashboardHandoffDocs:
+    def test_backend_dashboard_handoff_exists(self) -> None:
+        assert BACKEND_DASHBOARD_HANDOFF_FILE.exists()
+
+    def test_backend_dashboard_handoff_covers_olap_first_reads(self) -> None:
+        content = BACKEND_DASHBOARD_HANDOFF_FILE.read_text(encoding="utf-8")
+        for snippet in (
+            "analytics_poll_summary",
+            "analytics_option_breakdown",
+            "analytics_votes_timeseries",
+            "analytics_user_participation",
+            "/dashboard/summary",
+            "/polls/{pollId}/results/timeseries",
+            "do not aggregate raw `votes`",
+        ):
+            assert snippet in content
+
+    def test_frontend_dashboard_handoff_exists(self) -> None:
+        assert FRONTEND_DASHBOARD_HANDOFF_FILE.exists()
+
+    def test_frontend_dashboard_handoff_covers_angular_integration(self) -> None:
+        content = FRONTEND_DASHBOARD_HANDOFF_FILE.read_text(encoding="utf-8")
+        for snippet in (
+            "Angular",
+            "DashboardService",
+            "PollMetricsComponent",
+            "frontend/src/app/models.ts",
+            "/dashboard/top-users",
+            "/polls/{pollId}/results",
+        ):
+            assert snippet in content
+
+    def test_docs_index_lists_dashboard_handoffs(self) -> None:
+        content = DOCS_INDEX_FILE.read_text(encoding="utf-8")
+        assert "BACKEND_DASHBOARD_IMPLEMENTATION_HANDOFF.md" in content
+        assert "FRONTEND_DASHBOARD_ANGULAR_HANDOFF.md" in content
