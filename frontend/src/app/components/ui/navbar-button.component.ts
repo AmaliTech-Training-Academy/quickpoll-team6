@@ -17,6 +17,7 @@ import { ButtonComponent } from './primitives/button.component';
       [routerLinkActiveOptions]="{ exact: exact() }"
       [variant]="rla.isActive ? 'secondary' : 'ghost'"
       class="w-full justify-start! whitespace-nowrap"
+      [attr.data-test-id]="'nav-button-' + label().toLowerCase().replaceAll(' ', '-')"
     >
       {{ label() }}
     </button>

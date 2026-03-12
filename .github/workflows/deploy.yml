@@ -2,21 +2,27 @@ name: Deploy
 
 on:
   push:
-    branches: [develop, feature/infra, main]
+    branches: [develop, feature/infra]
     paths-ignore:
       - "docs/**"
       - "README.md"
       - "**.md"
   workflow_dispatch:
+    inputs:
+      run_data_engineering:
+        description: "Run the data-engineering bootstrap task"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   AWS_REGION: eu-west-1
-  # Set environment dynamically based on branch
-  ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
-  TF_DIR: ${{ github.ref_name == 'main' && 'devops/terraform/environments/production' || 'devops/terraform/environments/staging' }}
+  # Staging only
+  ENV: staging
+  TF_DIR: devops/terraform/environments/staging
 
 jobs:
   terraform:
@@ -36,10 +42,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: arn:aws:iam::714377355835:role/github-actions-roles
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-${{ github.run_id }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -141,10 +146,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: arn:aws:iam::714377355835:role/github-actions-roles
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-${{ github.run_id }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -173,10 +177,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: arn:aws:iam::714377355835:role/github-actions-roles
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-${{ github.run_id }}
 
       - name: Force new deployment - backend
         run: |
@@ -307,15 +310,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     timeout-minutes: 15
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_data_engineering == 'true' }}
 
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: arn:aws:iam::714377355835:role/github-actions-roles
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-${{ github.run_id }}
+
+      - name: Wait for RDS to be available
+        run: |
+          set -euo pipefail
+          DB_ID="quickpoll-${ENV}-postgres"
+          echo "Waiting for RDS instance ${DB_ID} to be available..."
+          aws rds wait db-instance-available --db-instance-identifier "$DB_ID"
+          echo "RDS is available."
 
       - name: Resolve network config from Terraform outputs
         id: net
@@ -338,6 +349,38 @@ jobs:
 
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
           echo "sg_id=$SG_ID"           >> $GITHUB_OUTPUT
+
+      - name: Ensure DB allows data-engineering access
+        run: |
+          set -euo pipefail
+          DB_SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=quickpoll-${ENV}-db-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          DE_SG_ID="${{ steps.net.outputs.sg_id }}"
+
+          if [[ -z "${DB_SG_ID:-}" || "${DB_SG_ID}" == "None" || -z "${DE_SG_ID:-}" || "${DE_SG_ID}" == "None" ]]; then
+            echo "::error::Could not resolve DB SG or data-engineering SG (db=${DB_SG_ID:-}, de=${DE_SG_ID:-})."
+            exit 1
+          fi
+
+          RULE_OK=$(aws ec2 describe-security-groups \
+            --group-ids "$DB_SG_ID" \
+            --query "SecurityGroups[0].IpPermissions[?FromPort==\`5432\` && ToPort==\`5432\` && IpProtocol=='tcp'].UserIdGroupPairs[?GroupId=='${DE_SG_ID}'] | length(@)" \
+            --output text)
+
+          if [[ "${RULE_OK}" == "0" || "${RULE_OK}" == "None" ]]; then
+            echo "DB SG missing ingress from data-engineering SG. Adding rule..."
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$DB_SG_ID" \
+              --protocol tcp \
+              --port 5432 \
+              --source-group "$DE_SG_ID" \
+              --no-cli-pager
+          else
+            echo "DB SG already allows data-engineering access."
+          fi
 
       - name: Resolve task definition ARN
         id: taskdef

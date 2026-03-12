@@ -10,13 +10,17 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
   imports: [ButtonComponent, NgIcon],
   providers: [provideIcons({ hugeSun02, hugeMoon02, hugeComputer })],
   template: `
-    <div class="inline-flex items-center rounded-full border border-border bg-surface p-px">
+    <div
+      class="inline-flex items-center rounded-full border border-border bg-surface p-px"
+      data-test-id="theme-toggle-group"
+    >
       <button
         app-button
         variant="ghost"
         size="sm"
         class="rounded-full! px-2.5!"
         aria-label="Use light theme"
+        data-test-id="theme-toggle-light-button"
         [attr.aria-pressed]="themePreference() === 'light'"
         (click)="setTheme('light')"
       >
@@ -29,6 +33,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
         size="sm"
         class="rounded-full! px-2.5!"
         aria-label="Use dark theme"
+        data-test-id="theme-toggle-dark-button"
         [attr.aria-pressed]="themePreference() === 'dark'"
         (click)="setTheme('dark')"
       >
@@ -41,6 +46,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
         size="sm"
         class="rounded-full! px-2.5!"
         aria-label="Use system theme"
+        data-test-id="theme-toggle-system-button"
         [attr.aria-pressed]="themePreference() === 'system'"
         (click)="setTheme('system')"
       >

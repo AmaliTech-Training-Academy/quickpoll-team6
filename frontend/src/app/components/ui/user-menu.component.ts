@@ -10,27 +10,46 @@ import { UserAvatarComponent } from '@/components/ui/user-avatar.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, RouterLink, AsyncPipe, UserAvatarComponent],
   template: `
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2" data-test-id="user-menu">
       @if (user | async; as currentUser) {
-        <div class="hidden md:flex flex-col items-end">
-          <p class="text-xs font-medium">{{ currentUser.name }}</p>
-          <p class="text-xs text-muted-foreground">{{ currentUser.email }}</p>
+        <div class="hidden md:flex flex-col items-end" data-test-id="user-menu-user-details">
+          <p class="text-xs font-medium" data-test-id="user-menu-user-name">
+            {{ currentUser.name }}
+          </p>
+          <p class="text-xs text-muted-foreground" data-test-id="user-menu-user-email">
+            {{ currentUser.email }}
+          </p>
         </div>
         <button
           app-button
           variant="outline"
           routerLink="/~/account"
           class="w-fit! size-9! px-0! rounded-full! shrink-0"
+          data-test-id="user-menu-account-button"
         >
-          <app-user-avatar class="inline-flex size-9 shrink-0" [name]="currentUser.name" />
+          <app-user-avatar
+            class="inline-flex size-9 shrink-0"
+            [name]="currentUser.name"
+            data-test-id="user-menu-avatar"
+          />
         </button>
       } @else {
-        <div class="hidden md:flex flex-col items-end gap-1">
-          <div class="h-3 w-24 rounded bg-muted animate-pulse"></div>
-          <div class="h-3 w-32 rounded bg-muted animate-pulse"></div>
+        <div
+          class="hidden md:flex flex-col items-end gap-1"
+          data-test-id="user-menu-loading-details"
+        >
+          <div
+            class="h-3 w-24 rounded bg-muted animate-pulse"
+            data-test-id="user-menu-loading-name"
+          ></div>
+          <div
+            class="h-3 w-32 rounded bg-muted animate-pulse"
+            data-test-id="user-menu-loading-email"
+          ></div>
         </div>
         <div
           class="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-secondary/50 animate-pulse"
+          data-test-id="user-menu-loading-avatar"
         ></div>
       }
     </div>

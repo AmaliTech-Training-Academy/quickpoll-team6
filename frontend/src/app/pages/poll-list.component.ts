@@ -32,24 +32,32 @@ import { PollCardSkeletonComponent } from '@/components/ui/poll-card-skeleton.co
   providers: [provideIcons({ hugeAdd01 })],
   template: `
     <app-content-header pageTitle="Polls">
-      <button app-button routerLink="/~/polls/new" class="gap-2">
+      <button
+        app-button
+        routerLink="/~/polls/new"
+        class="gap-2"
+        data-test-id="poll-list-create-button"
+      >
         <ng-icon name="hugeAdd01" />
         Create Poll
       </button>
     </app-content-header>
 
-    <div class="maxview-container p-5">
-      <app-secondary-navbar [navLinks]="navLinks" />
-      <div class="flex flex-col space-y-10">
+    <div class="maxview-container p-5" data-test-id="poll-list-page">
+      <app-secondary-navbar [navLinks]="navLinks" data-test-id="poll-list-filter-nav" />
+      <div class="flex flex-col space-y-10" data-test-id="poll-list">
         @if (loading) {
           @for (skeleton of [1, 2, 3, 4]; track skeleton) {
-            <app-poll-card-skeleton></app-poll-card-skeleton>
+            <app-poll-card-skeleton data-test-id="poll-list-skeleton"></app-poll-card-skeleton>
           }
         } @else if (filteredPolls.length === 0) {
-          <p>No polls found for this filter.</p>
+          <p data-test-id="poll-list-empty-state">No polls found for this filter.</p>
         } @else {
           @for (poll of filteredPolls; track poll.id) {
-            <app-poll-card [poll]="poll"></app-poll-card>
+            <app-poll-card
+              [poll]="poll"
+              [attr.data-test-id]="'poll-card-' + poll.id"
+            ></app-poll-card>
           }
         }
       </div>

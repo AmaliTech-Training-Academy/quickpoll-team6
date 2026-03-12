@@ -45,7 +45,7 @@ type PollAudience = 'company-wide' | 'department';
   ],
   providers: [provideIcons({ hugeArrowDown01, hugeCancel01, hugeCheckmarkCircle01 })],
   template: `
-    <div>
+    <div data-test-id="create-poll-department-section">
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
           <h2 class="text-base font-medium text-foreground">Audience</h2>
@@ -58,15 +58,16 @@ type PollAudience = 'company-wide' | 'department';
           [value]="audience()"
           (valueChange)="onAudienceValueChange($event)"
           class="grid! gap-3 sm:grid-cols-2!"
+          data-test-id="create-poll-audience-radio-group"
         >
-          <app-radio-item value="company-wide">
+          <app-radio-item value="company-wide" testId="create-poll-audience-company-wide-option">
             <span class="block text-sm font-medium text-inherit">Company-Wide</span>
             <span class="mt-1 block text-xs text-muted-foreground">
               Anyone in the company can access and vote on this poll.
             </span>
           </app-radio-item>
 
-          <app-radio-item value="department">
+          <app-radio-item value="department" testId="create-poll-audience-department-option">
             <span class="block text-sm font-medium text-inherit">Department</span>
             <span class="mt-1 block text-xs text-muted-foreground">
               Limit this poll to one or more departments.
@@ -75,29 +76,44 @@ type PollAudience = 'company-wide' | 'department';
         </app-radio-group>
 
         @if (audience() === 'department') {
-          <div class="flex flex-col gap-2">
+          <div class="flex flex-col gap-2" data-test-id="create-poll-department-selection">
             <div
-              [ngpComboboxValue]="selectedDepartmentNames() ?? []"
+              [ngpComboboxValue]="selectedDepartmentNames()"
               (ngpComboboxValueChange)="onComboboxValueChange($event)"
               (ngpComboboxOpenChange)="resetOnClose($event)"
               ngpComboboxMultiple
               ngpCombobox
+              data-test-id="create-poll-department-combobox"
             >
-              <div class="input-container" [class.py-1]="selectedDepartmentNames().length > 0">
+              <div
+                class="input-container"
+                [class.py-1]="selectedDepartmentNames().length > 0"
+                data-test-id="create-poll-department-input-container"
+              >
                 @if (selectedDepartmentNames().length > 0) {
-                  <div class="chips-container">
+                  <div class="chips-container" data-test-id="create-poll-department-chip-list">
                     @for (
                       selectedDepartmentName of selectedDepartmentNames();
                       track selectedDepartmentName;
                       let i = $index
                     ) {
-                      <div class="chip" [class.chip-focused]="focusedChipIndex() === i">
-                        <span class="chip-text">{{ selectedDepartmentName }}</span>
+                      <div
+                        class="chip"
+                        [class.chip-focused]="focusedChipIndex() === i"
+                        [attr.data-test-id]="'create-poll-department-chip-' + i"
+                      >
+                        <span
+                          class="chip-text"
+                          [attr.data-test-id]="'create-poll-department-chip-label-' + i"
+                        >
+                          {{ selectedDepartmentName }}
+                        </span>
                         <button
                           class="chip-remove"
                           [attr.aria-label]="'Remove ' + selectedDepartmentName"
                           (click)="removeDepartmentByName(selectedDepartmentName)"
                           type="button"
+                          [attr.data-test-id]="'create-poll-department-chip-remove-button-' + i"
                         >
                           <ng-icon name="hugeCancel01" />
                         </button>
@@ -114,33 +130,58 @@ type PollAudience = 'company-wide' | 'department';
                   (keydown)="onInputKeyDown($event)"
                   placeholder="Select departments"
                   ngpComboboxInput
+                  data-test-id="create-poll-department-input"
                 />
               </div>
 
-              <button ngpComboboxButton aria-label="Toggle departments dropdown">
+              <button
+                ngpComboboxButton
+                aria-label="Toggle departments dropdown"
+                data-test-id="create-poll-department-toggle-button"
+              >
                 <ng-icon name="hugeArrowDown01" />
               </button>
 
-              <div *ngpComboboxPortal ngpComboboxDropdown>
+              <div
+                *ngpComboboxPortal
+                ngpComboboxDropdown
+                data-test-id="create-poll-department-dropdown"
+              >
                 @for (department of filteredDepartments(); track department.id) {
-                  <div [ngpComboboxOptionValue]="department.name" ngpComboboxOption>
+                  <div
+                    [ngpComboboxOptionValue]="department.name"
+                    ngpComboboxOption
+                    [attr.data-test-id]="'create-poll-department-option-' + department.id"
+                  >
                     {{ department.name }}
                     @if (isSelected(department.id)) {
                       <ng-icon name="hugeCheckmarkCircle01" />
                     }
                   </div>
                 } @empty {
-                  <div class="empty-message">No departments found</div>
+                  <div class="empty-message" data-test-id="create-poll-department-empty-message">
+                    No departments found
+                  </div>
                 }
               </div>
             </div>
 
             @if (loading()) {
-              <p class="text-xs text-muted-foreground">Loading departments…</p>
+              <p
+                class="text-xs text-muted-foreground"
+                data-test-id="create-poll-department-loading-message"
+              >
+                Loading departments…
+              </p>
             }
 
             @if (error()) {
-              <p class="text-xs text-destructive">{{ error() }}</p>
+              <p
+                class="text-xs text-destructive"
+                data-test-id="create-poll-department-error-message"
+              >
+                {{ error() }}
+              </p>
             }
           </div>
         }

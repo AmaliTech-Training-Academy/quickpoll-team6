@@ -64,7 +64,7 @@ public class SchemaValidationTests extends BaseTest {
         Response response = apiClient.post("/api/polls", pollRequest);
         
         // Assert - API returns 200 OK per OpenAPI spec
-        TestHelper.assertStatusCode(response, 200);
+        TestHelper.assertStatusCode(response, 201);
         response.then().assertThat().body(
             JsonSchemaValidator.matchesJsonSchema(
                 new File("src/test/resources/schemas/poll-response-schema.json")
@@ -128,7 +128,7 @@ public class SchemaValidationTests extends BaseTest {
         Response response = apiClient.get("/api/polls/my-polls");
         
         // Assert
-        TestHelper.assertStatusCode(response, 201);
+        TestHelper.assertStatusCode(response, 200);
         
         // Validate paginated response structure (Spring Data Page format)
         SchemaValidator.validatePaginatedResponse(response, 

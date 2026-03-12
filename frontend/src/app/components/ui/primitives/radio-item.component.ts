@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { NgpRadioItem } from 'ng-primitives/radio';
 
 @Component({
@@ -10,12 +10,19 @@ import { NgpRadioItem } from 'ng-primitives/radio';
       inputs: ['ngpRadioItemValue:value', 'ngpRadioItemDisabled:disabled'],
     },
   ],
+  host: {
+    '[attr.data-test-id]': 'testId()',
+  },
   template: `
-    <div ngpRadioIndicator class="indicator">
+    <div
+      ngpRadioIndicator
+      class="indicator"
+      [attr.data-test-id]="testId() ? testId() + '-indicator' : null"
+    >
       <span class="indicator-dot"></span>
     </div>
 
-    <div class="content">
+    <div class="content" [attr.data-test-id]="testId() ? testId() + '-content' : null">
       <ng-content />
     </div>
   `,
@@ -103,4 +110,6 @@ import { NgpRadioItem } from 'ng-primitives/radio';
     }
   `,
 })
-export class RadioItemComponent {}
+export class RadioItemComponent {
+  readonly testId = input<string | null>(null);
+}
