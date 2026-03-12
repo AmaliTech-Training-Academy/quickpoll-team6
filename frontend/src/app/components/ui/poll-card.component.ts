@@ -10,27 +10,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { hugeView, hugeSquareLock02, hugeUser } from '@ng-icons/huge-icons';
-import { User } from '@/models';
+import { User, Poll, PollOption } from '@/models';
 import { AuthService } from '@/services/auth.service';
 import { ButtonComponent } from './primitives/button.component';
-
-type PollOption = {
-  id: number;
-  text: string;
-};
-
-type Poll = {
-  id: number;
-  question: string;
-  description?: string;
-  creatorName?: string;
-  creatorEmail: string;
-  maxSelections: number;
-  expiresAt: string;
-  status: string;
-  createdAt: string;
-  options: PollOption[];
-};
 
 @Component({
   selector: 'app-poll-card',

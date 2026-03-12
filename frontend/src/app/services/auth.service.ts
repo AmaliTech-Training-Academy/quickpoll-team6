@@ -1,8 +1,8 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, shareReplay, tap } from 'rxjs';
-import { AuthResponse, User } from '@/models';
+import { inject, Injectable } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { API_BASE_URL } from '@/constants';
+import { AuthResponse, User } from '@/models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -10,9 +10,7 @@ export class AuthService {
   private readonly authApiUrl = `${API_BASE_URL}/auth`;
   private readonly usersApiUrl = `${API_BASE_URL}/users`;
   private readonly http = inject(HttpClient);
-  private readonly profile$ = this.http
-    .get<User>(`${this.usersApiUrl}/me`)
-    .pipe(shareReplay({ bufferSize: 1, refCount: true }));
+  private readonly profile$ = this.http.get<User>(`${this.usersApiUrl}/me`);
 
   login(email: string, password: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.authApiUrl}/login`, { email, password }).pipe(

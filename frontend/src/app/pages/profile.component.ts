@@ -14,7 +14,7 @@ import { InputComponent } from '@/components/ui/primitives/input.component';
   template: `
     @if (!isLoading()) {
       <div class="flex max-lg:flex-col gap-16" data-test-id="profile-page">
-        <div class="flex flex-col gap-5 md:min-w-90">
+        <div class="flex lg:flex-col gap-5 md:min-w-90">
           <app-user-avatar
             class="w-full aspect-square"
             [name]="user()?.name"

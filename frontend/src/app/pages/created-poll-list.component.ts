@@ -15,10 +15,7 @@ import { PollService } from '@/services/poll.service';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { ContentHeaderComponent } from '@/components/ui/content-header.component';
 import { PollCardComponent } from '@/components/ui/poll-card.component';
-import { SecondaryNavbarComponent } from '@/components/ui/navbar.component';
 import { PollCardSkeletonComponent } from '@/components/ui/poll-card-skeleton.component';
-
-type PollFilter = 'all' | 'active' | 'department' | 'me';
 
 @Component({
   selector: 'app-poll-list',
@@ -30,7 +27,6 @@ type PollFilter = 'all' | 'active' | 'department' | 'me';
     ContentHeaderComponent,
     PollCardComponent,
     PollCardSkeletonComponent,
-    SecondaryNavbarComponent,
   ],
   providers: [provideIcons({ hugeAdd01 })],
   template: `

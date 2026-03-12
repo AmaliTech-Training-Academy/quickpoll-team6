@@ -31,6 +31,7 @@ export interface Poll {
   question: string;
   description: string;
   creatorEmail: string;
+  creatorName: string;
   maxSelections: number;
   anonymous: boolean;
   departmentIds: number[];
@@ -43,7 +44,7 @@ export interface Poll {
 export interface PollOption {
   id: number;
   poll_id: number;
-  option_text: string;
+  text: string;
   vote_count: number | null;
 }
 
