@@ -113,6 +113,10 @@ export class LayoutComponent {
       path: '/~/polls',
     },
     {
+      label: 'Dashboard',
+      path: '/~/dashboard',
+    },
+    {
       label: 'Account',
       path: '/~/account',
     },

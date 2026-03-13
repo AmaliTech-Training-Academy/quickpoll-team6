@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { hugeView, hugeSquareLock02, hugeUser, hugeCancel01 } from '@ng-icons/huge-icons';
 import { User, Poll } from '@/models';
@@ -37,6 +38,15 @@ import { PollService } from '@/services/poll.service';
                 <span class="px-1 py-0.5 ml-1 rounded-md bg-muted">me</span>
               }
             </p>
+            <span
+              class="ml-auto text-[10px] font-medium uppercase px-2 py-0.5 rounded-full"
+              [class.bg-green-100]="poll().status === 'ACTIVE'"
+              [class.text-green-700]="poll().status === 'ACTIVE'"
+              [class.bg-muted]="poll().status !== 'ACTIVE'"
+              [class.text-muted-foreground]="poll().status !== 'ACTIVE'"
+            >
+              {{ poll().status }}
+            </span>
           </div>
           <h2>
             @if (userIsOwner()) {
@@ -112,6 +122,9 @@ import { PollService } from '@/services/poll.service';
             {{ selections().length }} selected (max {{ poll().maxSelections }})
           </div>
         }
+        @if (voteError()) {
+          <p class="text-sm text-red-600 mt-1">{{ voteError() }}</p>
+        }
         @if (selections().length > 0) {
           <button app-button variant="primary" (click)="castVote()" [disabled]="isSubmitting()">
             @if (isSubmitting()) {
@@ -135,6 +148,7 @@ export class PollCardComponent implements OnInit {
 
   protected readonly selections = signal<number[]>([]);
   protected readonly isSubmitting = signal(false);
+  protected readonly voteError = signal<string | null>(null);
 
   protected readonly maxSelectionsReached = computed(() => {
     const poll = this.poll();
@@ -164,12 +178,19 @@ export class PollCardComponent implements OnInit {
     }
 
     this.isSubmitting.set(true);
+    this.voteError.set(null);
     this.pollService.castVote(this.poll().id, this.selections()!).subscribe({
-      error: (error) => {
-        console.error('Error casting vote:', error);
-      },
-      complete: () => {
+      next: () => {
         this.isSubmitting.set(false);
+        this.selections.set([]);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isSubmitting.set(false);
+        if (error.status === 409) {
+          this.voteError.set('You have already voted on this poll.');
+        } else {
+          this.voteError.set('Failed to submit vote. Please try again.');
+        }
       },
     });
   }

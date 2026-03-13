@@ -90,7 +90,7 @@ export class CreatedPollListComponent implements OnInit {
     }
     this.cdr.markForCheck();
 
-    this.pollService.getAll(page, this.pageSize).subscribe({
+    this.pollService.getUserCreatedPolls(page, this.pageSize).subscribe({
       next: (res) => {
         const newPolls = res.content || [];
 

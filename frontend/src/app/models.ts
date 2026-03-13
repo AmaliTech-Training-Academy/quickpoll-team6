@@ -3,6 +3,18 @@ export interface Department {
   name: string;
 }
 
+export interface DepartmentResponse {
+  id: number;
+  name: string;
+  emails: string[];
+  failedEmails: string[];
+}
+
+export interface DepartmentRequest {
+  name: string;
+  emails: string[];
+}
+
 export interface User {
   id: number;
   email: string;
@@ -107,6 +119,67 @@ export interface ClosePollResponse {
   totalVotes: number;
   invitedDepartments: string[];
   options: ClosePollOption[];
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
+export interface DashboardSummary {
+  activePollCount: number;
+  closedPollCount: number;
+  totalPollCount: number;
+  totalVotesCast: number;
+  averageParticipationRate: number;
+  lastRefreshedAt: string | null;
+}
+
+export interface ActivePollItem {
+  pollId: number;
+  title: string;
+  creatorId: number;
+  creatorName: string;
+  status: 'ACTIVE' | 'CLOSED';
+  createdAt: string | null;
+  expiresAt: string | null;
+  totalVotes: number;
+  uniqueVoters: number;
+  participationRate: number;
+  lastUpdated: string | null;
+}
+
+export interface WinningOption {
+  optionId: number;
+  optionText: string;
+  voteCount: number;
+  votePercentage: number;
+}
+
+export interface RecentResultItem {
+  pollId: number;
+  title: string;
+  creatorId: number;
+  creatorName: string;
+  status: 'ACTIVE' | 'CLOSED';
+  totalVotes: number;
+  uniqueVoters: number;
+  participationRate: number;
+  lastUpdated: string | null;
+  winningOption: WinningOption;
+}
+
+export interface TopUser {
+  userId: number;
+  userName: string;
+  totalVotesCast: number;
+  pollsParticipated: number;
+  pollsCreated: number;
+  lastActive: string | null;
+  lastUpdated: string | null;
 }
 
 export interface PollAnalyticsOption {

@@ -1,10 +1,14 @@
 package com.amalitech.quickpoll.controller;
 
+import com.amalitech.quickpoll.config.JwtService;
 import com.amalitech.quickpoll.dto.*;
 import com.amalitech.quickpoll.mapper.AuthMapper;
 import com.amalitech.quickpoll.service.AuthService;
+import com.amalitech.quickpoll.service.TokenBlacklistService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthMapper authMapper;
+    private final JwtService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
@@ -59,5 +65,33 @@ public class AuthController {
         AuthServiceResponse serviceResponse = authService.refreshToken(refreshToken);
         setRefreshTokenCookie(response, serviceResponse.getRefreshToken());
         return ResponseEntity.ok(authMapper.toAuthResponse(serviceResponse));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout user", description = "Invalidate the current access token")
+    @SecurityRequirement(name = "Bearer Authentication")
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String token = authHeader.substring(7);
+        if (!jwtService.isTokenValid(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        tokenBlacklistService.blacklist(token, jwtService.getExpirationDate(token));
+
+        ResponseCookie clearCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/auth/refresh")
+                .maxAge(0)
+                .build();
+        response.addHeader("Set-Cookie", clearCookie.toString());
+
+        return ResponseEntity.noContent().build();
     }
 }
