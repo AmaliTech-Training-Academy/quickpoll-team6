@@ -43,6 +43,9 @@ public class Poll {
     @Column(name = "max_selections", nullable = false)
     private Integer maxSelections = 1;
 
+    @Column(name = "is_anonymous", nullable = false)
+    private boolean anonymous = false;
+
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
