@@ -65,7 +65,7 @@ public class VoteService {
                     Vote vote = new Vote();
                     vote.setPoll(poll);
                     vote.setOption(option);
-                    vote.setUser(voter);
+                    vote.setUser(poll.isAnonymous() ? null : voter);
                     return vote;
                 })
                 .toList();

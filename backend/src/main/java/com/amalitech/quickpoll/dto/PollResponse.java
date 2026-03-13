@@ -12,6 +12,7 @@ public class PollResponse {
     private String creatorEmail;
     private String creatorName;
     private String status;
+    private boolean anonymous;
     private Integer maxSelections;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
