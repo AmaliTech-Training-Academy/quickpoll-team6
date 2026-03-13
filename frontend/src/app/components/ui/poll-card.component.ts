@@ -42,18 +42,14 @@ import { PollService } from '@/services/poll.service';
             </p>
             @if (voted()) {
               <span
-                class="ml-auto text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-700"
+                class="ml-auto text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
               >
                 Voted
               </span>
             }
             <span
-              class="text-[10px] font-medium uppercase px-2 py-0.5 rounded-full"
+              class="text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
               [class.ml-auto]="!voted()"
-              [class.bg-green-100]="poll().status === 'ACTIVE'"
-              [class.text-green-700]="poll().status === 'ACTIVE'"
-              [class.bg-muted]="poll().status !== 'ACTIVE'"
-              [class.text-muted-foreground]="poll().status !== 'ACTIVE'"
             >
               {{ poll().status }}
             </span>
@@ -100,7 +96,7 @@ import { PollService } from '@/services/poll.service';
       </div>
 
       @if (voted()) {
-        <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+        <div class="mt-4 rounded-md border bg-muted px-4 py-3 text-sm text-muted-foreground">
           You have already voted on this poll.
         </div>
       } @else {

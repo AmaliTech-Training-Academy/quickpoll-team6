@@ -40,7 +40,7 @@ public class DashboardService {
     public DashboardSummaryResponse getDashboardSummary(User user) {
         DashboardRepository.SummaryProjection proj = isAdmin(user)
                 ? dashboardRepository.getGlobalSummary()
-                : dashboardRepository.getCreatorSummary(user.getId());
+                : dashboardRepository.getEntitledUserSummary(user.getEmail());
 
         if (proj == null) {
             return DashboardSummaryResponse.builder().build();
@@ -67,8 +67,7 @@ public class DashboardService {
 
         Page<AnalyticsPollSummary> summaries = isAdmin(user)
                 ? dashboardRepository.findByStatusOrderByLastUpdatedDescCreatedAtDesc("ACTIVE", pageable)
-                : dashboardRepository.findByStatusAndCreatorIdOrderByLastUpdatedDescCreatedAtDesc(
-                        "ACTIVE", user.getId(), pageable);
+                : dashboardRepository.findActiveByEntitledUser("ACTIVE", user.getEmail(), pageable);
 
         return summaries.map(this::toActivePollResponse);
     }
@@ -84,7 +83,7 @@ public class DashboardService {
 
         Page<AnalyticsPollSummary> summaries = isAdmin(user)
                 ? dashboardRepository.findAllByOrderByLastUpdatedDesc(pageable)
-                : dashboardRepository.findByCreatorIdOrderByLastUpdatedDesc(user.getId(), pageable);
+                : dashboardRepository.findAllByEntitledUser(user.getEmail(), pageable);
 
         if (summaries.isEmpty()) {
             return Page.empty(pageable);

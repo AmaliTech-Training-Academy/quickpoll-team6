@@ -215,6 +215,7 @@ def _ensure_analytics_bootstrap() -> None:
     """Create missing analytics tables and redeploy idempotent triggers."""
     engine = get_engine()
     create_analytics_tables(engine)
+    logger.info("Analytics tables ensured.")
     deploy_triggers(engine)
 
 
