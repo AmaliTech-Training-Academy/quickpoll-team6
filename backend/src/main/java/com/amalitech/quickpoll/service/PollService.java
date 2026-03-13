@@ -119,6 +119,9 @@ public class PollService {
             throw new IllegalArgumentException(
                     "Maximum selections cannot exceed the number of options (" + request.getOptions().size() + ")");
         }
+        if (request.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Expiration time must be in the future");
+        }
 
         Poll poll = pollMapper.toEntity(request, creator);
         log.info("Creating poll: {}", poll);

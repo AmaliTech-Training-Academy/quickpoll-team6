@@ -133,6 +133,22 @@ class PollServiceTest {
         verify(pollRepository).save(any());
     }
 
+    // ── expiresAt validation ────────────────────────────────────────────────
+
+    @Test
+    void createPoll_ExpiresAtInPast_ThrowsIllegalArgument() {
+        PollRequest request = buildRequest(List.of("A", "B"), 1);
+        request.setExpiresAt(LocalDateTime.now().minusDays(1));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> pollService.createPoll(request, creator())
+        );
+
+        assertTrue(ex.getMessage().contains("future"));
+        verify(pollRepository, never()).save(any());
+    }
+
     // ── getEntitledPolls – hasVoted flag ──────────────────────────────────────
 
     private Poll buildPollWithOptions(Long id) {
