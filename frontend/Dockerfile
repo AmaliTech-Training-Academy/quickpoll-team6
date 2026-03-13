@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Copy package files first for better layer caching
 COPY package*.json ./
+COPY package-lock.json ./
 RUN npm ci
 
 # Copy source and build
