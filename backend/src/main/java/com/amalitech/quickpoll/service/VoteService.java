@@ -6,12 +6,12 @@ import com.amalitech.quickpoll.dto.UserVoteResponse;
 import com.amalitech.quickpoll.dto.VoteRequest;
 import com.amalitech.quickpoll.dto.VoteResponse;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
-import com.amalitech.quickpoll.event.VoteCastDomainEvent;
+
 import com.amalitech.quickpoll.model.*;
 import com.amalitech.quickpoll.model.enums.VoteStatus;
 import com.amalitech.quickpoll.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +28,7 @@ public class VoteService {
     private final PollOptionRepository optionRepository;
     private final VoteRepository voteRepository;
     private final PollInviteRepository pollInviteRepository;
-    private final ApplicationEventPublisher eventPublisher;
+
 
     @Transactional
     public VoteResponse castVote(Long pollId, VoteRequest request, User voter) {
@@ -42,7 +42,6 @@ public class VoteService {
         PollInvite pollInvite = pollInviteRepository.findByPollIdAndMemberEmail(pollId, voter.getEmail())
                 .orElseThrow(() -> new AccessDeniedException("You are not invited to vote on this poll"));
 
-        // Check if user has already voted
         if (pollInvite.getVoteStatus() == VoteStatus.VOTED) {
             throw new AlreadyVotedException("You have already voted on this poll");
         }
@@ -73,12 +72,8 @@ public class VoteService {
 
         List<Vote> savedVotes = voteRepository.saveAll(votes);
         
-        // Update poll invite status to VOTED
         pollInvite.setVoteStatus(VoteStatus.VOTED);
         pollInviteRepository.save(pollInvite);
-        
-        savedVotes.forEach(vote -> eventPublisher.publishEvent(new VoteCastDomainEvent(vote)));
-
         return new VoteResponse(true, "Vote cast successfully");
     }
 

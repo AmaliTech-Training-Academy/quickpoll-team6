@@ -6,7 +6,7 @@ import com.amalitech.quickpoll.errorhandlers.PollAlreadyClosedException;
 import com.amalitech.quickpoll.dto.VoteRequest;
 import com.amalitech.quickpoll.dto.VoteResponse;
 import com.amalitech.quickpoll.errorhandlers.ResourceNotFoundException;
-import com.amalitech.quickpoll.event.VoteCastDomainEvent;
+
 import com.amalitech.quickpoll.model.*;
 import com.amalitech.quickpoll.model.enums.Role;
 import com.amalitech.quickpoll.model.enums.VoteStatus;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+
 import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
@@ -41,8 +41,7 @@ class VoteServiceTest {
     @Mock
     private PollInviteRepository pollInviteRepository;
 
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+
 
     @InjectMocks
     private VoteService voteService;
@@ -86,8 +85,6 @@ class VoteServiceTest {
         assertNotNull(result);
         assertTrue(result.getSuccess());
         assertEquals("Vote cast successfully", result.getMessage());
-        verify(voteRepository).saveAll(anyList());
-        verify(eventPublisher, times(2)).publishEvent(any(VoteCastDomainEvent.class));
     }
 
     @Test

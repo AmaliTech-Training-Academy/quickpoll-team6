@@ -38,3 +38,12 @@ data-engineering/.venv/
 # ── Docker ────────────────────────────────────────────────────
 *.log
 Makefile 
+data-engineering/docker-compose.yml
+.gitignore
+.gitignore
+.gitignore
+backend/.vscode/settings.json
+.gitignore
+backend/.vscode/settings.json
+.gitignore
+.gitignore
