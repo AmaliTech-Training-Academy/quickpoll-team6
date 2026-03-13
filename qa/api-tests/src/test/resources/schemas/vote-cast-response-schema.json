@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Vote Cast Response Schema",
+  "description": "Schema for the response returned when casting a vote on a poll (POST /votes/polls/{pollId})",
+  "required": ["success", "message"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Indicates if the vote was cast successfully"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable response message describing the result"
+    }
+  },
+  "additionalProperties": false
+}

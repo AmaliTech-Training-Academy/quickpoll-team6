@@ -27,8 +27,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * Contract tests for API response schema validation.
  * Validates that API responses conform to defined JSON schemas.
  * 
+ * Updated for new API endpoints:
+ * - POST /votes/polls/{pollId} - Cast vote
+ * - GET /votes/my-votes - Get my votes (paginated)
+ * 
  * @author QuickPoll API Testing Framework
- * @version 1.0.0
+ * @version 2.0.0
  */
 @Epic("QuickPoll API")
 @Feature("Contract Testing")
@@ -49,10 +53,9 @@ public class SchemaValidationTests extends BaseTest {
     @Severity(SeverityLevel.CRITICAL)
     @Story("Schema Validation")
     public void testPollResponseSchema() {
-        // Arrange - Use proper poll creation request with all required fields
+        // Arrange - Use proper poll creation request with all required fields (no title)
         Map<String, Object> pollRequest = new HashMap<>();
-        pollRequest.put("title", "Schema Test Poll");
-        pollRequest.put("question", "Testing schema validation");
+        pollRequest.put("question", "Schema Test Poll - Testing schema validation");
         pollRequest.put("description", "Testing schema validation");
         pollRequest.put("options", Arrays.asList("Option A", "Option B"));
         pollRequest.put("maxSelections", 1);
@@ -63,13 +66,19 @@ public class SchemaValidationTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/polls", pollRequest);
         
-        // Assert - API returns 200 OK per OpenAPI spec
+        // Assert - API returns 201 Created
         TestHelper.assertStatusCode(response, 201);
         response.then().assertThat().body(
             JsonSchemaValidator.matchesJsonSchema(
                 new File("src/test/resources/schemas/poll-response-schema.json")
             )
         );
+        
+        // Cleanup
+        String pollId = response.jsonPath().getString("id");
+        if (pollId != null) {
+            testDataManager.trackResource("poll", pollId);
+        }
     }
     
     @Test
@@ -94,22 +103,27 @@ public class SchemaValidationTests extends BaseTest {
     }
     
     @Test
-    @DisplayName("Vote response matches schema")
-    @Description("Verify that vote response conforms to the vote response schema")
+    @DisplayName("Vote cast response matches schema")
+    @Description("Verify that vote cast response conforms to the vote response schema (POST /votes/polls/{pollId})")
     @Severity(SeverityLevel.NORMAL)
     @Story("Schema Validation")
     public void testVoteResponseSchema() {
         // Arrange - Create a poll first
         String pollId = testDataManager.createTestPollWithDefaults();
         
-        VoteRequest voteRequest = new VoteRequest(pollId, 0, "test_voter");
+        // Get poll details to find option IDs
+        Response pollResponse = apiClient.get("/api/polls/" + pollId);
+        int firstOptionId = pollResponse.jsonPath().getInt("options[0].id");
         
-        // Act
-        Response response = apiClient.post("/api/votes", voteRequest);
+        // Create vote request with new format
+        VoteRequest voteRequest = new VoteRequest(firstOptionId);
+        
+        // Act - Use new endpoint POST /votes/polls/{pollId}
+        Response response = apiClient.post("/api/votes/polls/" + pollId, voteRequest);
         
         // Assert
         int statusCode = response.getStatusCode();
-        if (statusCode == 201 || statusCode == 200) {
+        if (statusCode == 200 || statusCode == 201) {
             response.then().assertThat().body(
                 JsonSchemaValidator.matchesJsonSchema(
                     new File("src/test/resources/schemas/vote-response-schema.json")
@@ -191,5 +205,68 @@ public class SchemaValidationTests extends BaseTest {
             TestHelper.assertResponseNotNull(response, "[0].name");
             TestHelper.assertResponseNotNull(response, "[0].emails");
         }
+    }
+    
+    @Test
+    @DisplayName("Vote cast response matches vote-cast-response schema")
+    @Description("Verify that casting a vote returns a response conforming to vote-cast-response-schema.json")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Schema Validation")
+    public void testVoteCastResponseSchema() {
+        // Arrange - Create a poll first
+        String pollId = testDataManager.createTestPollWithDefaults();
+        
+        // Get poll details to find option IDs
+        Response pollResponse = apiClient.get("/api/polls/" + pollId);
+        int firstOptionId = pollResponse.jsonPath().getInt("options[0].id");
+        
+        // Create vote request
+        VoteRequest voteRequest = new VoteRequest(firstOptionId);
+        
+        // Act - Cast vote using new endpoint
+        Response response = apiClient.post("/api/votes/polls/" + pollId, voteRequest);
+        
+        // Assert
+        int statusCode = response.getStatusCode();
+        if (statusCode == 200 || statusCode == 201) {
+            response.then().assertThat().body(
+                JsonSchemaValidator.matchesJsonSchema(
+                    new File("src/test/resources/schemas/vote-cast-response-schema.json")
+                )
+            );
+            
+            // Verify required fields
+            TestHelper.assertResponseNotNull(response, "success");
+            TestHelper.assertResponseNotNull(response, "message");
+        }
+    }
+    
+    @Test
+    @DisplayName("My votes response matches paginated schema")
+    @Description("Verify that GET /votes/my-votes returns a paginated response conforming to paginated-my-votes-response-schema.json")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Schema Validation")
+    public void testMyVotesPaginatedResponseSchema() {
+        // Act - Get my votes
+        Response response = apiClient.get("/api/votes/my-votes");
+        
+        // Assert
+        TestHelper.assertStatusCode(response, 200);
+        
+        // Validate paginated response structure
+        SchemaValidator.validatePaginatedResponse(response, null);
+        
+        // Verify pagination fields
+        response.then()
+            .body("content", instanceOf(List.class))
+            .body("totalPages", notNullValue())
+            .body("totalElements", greaterThanOrEqualTo(0));
+        
+        // Validate against full paginated my-votes schema
+        response.then().assertThat().body(
+            JsonSchemaValidator.matchesJsonSchema(
+                new File("src/test/resources/schemas/paginated-my-votes-response-schema.json")
+            )
+        );
     }
 }

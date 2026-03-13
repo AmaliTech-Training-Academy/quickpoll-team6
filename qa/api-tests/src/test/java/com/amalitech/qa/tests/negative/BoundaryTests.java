@@ -28,17 +28,16 @@ import static org.junit.jupiter.api.Assertions.*;
  * - question: minLength=5, maxLength=500 (REQUIRED)
  * - options: minItems=2, maxItems=10 (REQUIRED)
  * - description: no explicit constraints (OPTIONAL)
- * - votes: array of integers, minimum=0 (REQUIRED)
  * 
  * Expected Behaviors:
  * - Required fields with null values: 400 Bad Request
  * - Optional fields with null values: 200/201 OK
  * - Fields exceeding max length: 400 Bad Request with validation error
- * - Special characters and unicode: Should be accepted (UTF-8 support)
- * - Malicious input (XSS, SQL injection): 400 Bad Request or sanitized
+ * - Special characters and unicode: Should be accepted (UTF-8 support) with 201
+ * - Options exceeding max count of 10: 400 Bad Request
  * 
  * @author QuickPoll API Testing Framework
- * @version 1.0.0
+ * @version 2.0.0
  */
 @Epic("QuickPoll API")
 @Feature("Error Handling")
@@ -89,35 +88,70 @@ public class BoundaryTests extends BaseTest {
     }
     
     @Test
-    @DisplayName("Create poll with too many options - should reject with 400")
-    @Description("Verify API rejects polls exceeding maximum option count (10 options)")
+    @DisplayName("Create poll with too many options (>10) - should reject with 400")
+    @Description("Verify API rejects polls exceeding maximum option count of 10")
     @Severity(SeverityLevel.NORMAL)
     @Story("Boundary Conditions")
     public void testCreatePollWithManyOptions() {
-        // Field constraint: options max items = 10 (per poll-response-schema.json)
+        // Field constraint: options max items = 10 (backend enforces max of 10)
         // Expected behavior: API should reject with 400 Bad Request
         
-        // Arrange - Create 100 options (far exceeds 10 option limit)
-        List<String> manyOptions = IntStream.range(1, 101)
+        // Arrange - Create 11 options (just above the max of 10)
+        List<String> tooManyOptions = IntStream.range(1, 12)
             .mapToObj(i -> "Option " + i)
             .collect(Collectors.toList());
         
         CreatePollRequest pollRequest = new CreatePollRequest(
-            "Poll with many options",
-            "Testing boundary",
-            manyOptions,
-            true
+            "Poll with too many options",
+            "Testing boundary - max 10 options allowed",
+            tooManyOptions,
+            false
         );
         
         // Act
         Response response = apiClient.post("/api/polls", pollRequest);
         
-        // Assert - Should reject with 400
+        // Assert - Should reject with 400 because more than 10 options
         TestHelper.assertStatusCode(response, 400);
         
         String errorMessage = response.jsonPath().getString("message");
         assertNotNull(errorMessage,
             "Error response should contain a message");
+    }
+    
+    @Test
+    @DisplayName("Create poll with exactly 10 options - should succeed")
+    @Description("Verify API accepts polls with exactly 10 options (the maximum allowed)")
+    @Severity(SeverityLevel.NORMAL)
+    @Story("Boundary Conditions")
+    public void testCreatePollWithExactlyMaxOptions() {
+        // Field constraint: options max items = 10
+        // Expected behavior: API should accept exactly 10 options
+        
+        // Arrange - Create exactly 10 options (at the boundary)
+        List<String> maxOptions = IntStream.range(1, 11)
+            .mapToObj(i -> "Option " + i)
+            .collect(Collectors.toList());
+        
+        CreatePollRequest pollRequest = new CreatePollRequest(
+            "Poll with maximum options",
+            "Testing boundary - exactly 10 options",
+            maxOptions,
+            false
+        );
+        
+        // Act
+        Response response = apiClient.post("/api/polls", pollRequest);
+        
+        // Assert - Should accept with 201
+        TestHelper.assertStatusCode(response, 201);
+        TestHelper.assertResponseNotNull(response, "id");
+        
+        // Cleanup
+        String pollId = response.jsonPath().getString("id");
+        if (pollId != null) {
+            testDataManager.getCreatedResourceIds().add(pollId);
+        }
     }
     
     @Test
@@ -138,11 +172,11 @@ public class BoundaryTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/auth/register", registerRequest);
         
-        // Assert - API returns 200 for successful registration
+        // Assert - API may accept or reject
         int statusCode = response.getStatusCode();
         assertTrue(
-            statusCode == 400 || statusCode == 200,
-            "Expected 400 (rejected) or 200 (accepted)"
+            statusCode == 400 || statusCode == 200 || statusCode == 201,
+            "Expected 400 (rejected), 200, or 201 (accepted)"
         );
     }
     
@@ -163,21 +197,21 @@ public class BoundaryTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/auth/register", registerRequest);
         
-        // Assert - API returns 200 for successful registration
+        // Assert - API may accept or reject
         int statusCode = response.getStatusCode();
         assertTrue(
-            statusCode == 400 || statusCode == 200,
-            "Expected 400 (rejected) or 200 (accepted)"
+            statusCode == 400 || statusCode == 200 || statusCode == 201,
+            "Expected 400 (rejected), 200, or 201 (accepted)"
         );
     }
     
     @Test
-    @DisplayName("Create poll with special characters - should accept")
+    @DisplayName("Create poll with special characters - should accept with 201")
     @Description("Verify API accepts special characters and emojis in poll questions and options")
     @Severity(SeverityLevel.NORMAL)
     @Story("Boundary Conditions")
     public void testCreatePollWithSpecialCharacters() {
-        // Expected behavior: Special characters and emojis should be accepted
+        // Expected behavior: Special characters and emojis should be accepted with 201
         // These are valid UTF-8 characters and should not be rejected
         
         // Arrange
@@ -191,34 +225,30 @@ public class BoundaryTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/polls", pollRequest);
         
-        // Assert - Should accept special characters (200) or reject if not allowed (400)
-        int statusCode = response.getStatusCode();
+        // Assert - Should accept special characters with 201 Created
+        TestHelper.assertStatusCode(response, 201);
+        
+        // Verify special characters are preserved in response
+        String question = response.jsonPath().getString("question");
         assertTrue(
-            statusCode == 400 || statusCode == 200,
-            String.format("Expected 400 (special chars not allowed) or 200 (accepted), got %d. Response: %s",
-                statusCode, response.getBody().asString())
+            question.contains("!@#$"),
+            "Special characters should be preserved in response"
         );
         
-        // If accepted, verify special characters are preserved
-        if (statusCode == 200) {
-            String question = response.jsonPath().getString("question");
-            assertTrue(
-                question.contains("!@#$"),
-                "Special characters should be preserved in response"
-            );
-            
-            String pollId = response.jsonPath().getString("id");
+        // Cleanup
+        String pollId = response.jsonPath().getString("id");
+        if (pollId != null) {
             testDataManager.getCreatedResourceIds().add(pollId);
         }
     }
     
     @Test
-    @DisplayName("Create poll with unicode characters - should accept")
-    @Description("Verify API accepts unicode characters from various languages")
+    @DisplayName("Create poll with unicode characters - should accept with 201")
+    @Description("Verify API accepts unicode characters from various languages with 201 Created")
     @Severity(SeverityLevel.NORMAL)
     @Story("Boundary Conditions")
     public void testCreatePollWithUnicodeCharacters() {
-        // Expected behavior: Unicode characters should be accepted (UTF-8 support)
+        // Expected behavior: Unicode characters should be accepted with 201 (UTF-8 support)
         // Modern APIs should support international characters
         
         // Arrange
@@ -232,39 +262,35 @@ public class BoundaryTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/polls", pollRequest);
         
-        // Assert - Should accept unicode (200) or reject if not supported (400)
-        int statusCode = response.getStatusCode();
+        // Assert - Should accept unicode with 201 Created
+        TestHelper.assertStatusCode(response, 201);
+        
+        // Verify unicode is preserved in response
+        String question = response.jsonPath().getString("question");
         assertTrue(
-            statusCode == 400 || statusCode == 200,
-            String.format("Expected 400 (unicode not supported) or 200 (accepted), got %d. Response: %s",
-                statusCode, response.getBody().asString())
+            question.contains("你好") || question.contains("مرحبا") || question.contains("Привет"),
+            "Unicode characters should be preserved in response"
         );
         
-        // If accepted, verify unicode is preserved
-        if (statusCode == 200) {
-            String question = response.jsonPath().getString("question");
-            assertTrue(
-                question.contains("你好") || question.contains("مرحبا") || question.contains("Привет"),
-                "Unicode characters should be preserved in response"
-            );
-            
-            String pollId = response.jsonPath().getString("id");
+        // Cleanup
+        String pollId = response.jsonPath().getString("id");
+        if (pollId != null) {
             testDataManager.getCreatedResourceIds().add(pollId);
         }
     }
     
     @Test
-    @DisplayName("Create poll with null description - should accept (optional field)")
-    @Description("Verify API accepts null description since it's an optional field")
+    @DisplayName("Create poll with null description - should accept with 201 (optional field)")
+    @Description("Verify API accepts null description since it's an optional field and returns 201 Created")
     @Severity(SeverityLevel.NORMAL)
     @Story("Boundary Conditions")
     public void testCreatePollWithNullDescription() {
         // Field constraint: description is optional (not in required fields)
-        // Expected behavior: API should accept null for optional fields (201)
+        // Expected behavior: API should accept null for optional fields with 201 Created
         
         // Arrange
         CreatePollRequest pollRequest = new CreatePollRequest(
-            "Test Question",
+            "Test Question with null description",
             null, // Optional field - should be accepted
             Arrays.asList("Option 1", "Option 2"),
             false
@@ -273,20 +299,13 @@ public class BoundaryTests extends BaseTest {
         // Act
         Response response = apiClient.post("/api/polls", pollRequest);
         
-        // Assert - Should accept null for optional field (API returns 200)
-        int statusCode = response.getStatusCode();
-        assertTrue(
-            statusCode == 200,
-            String.format("Expected 200 (null accepted for optional field), got %d. Response: %s",
-                statusCode, response.getBody().asString())
-        );
+        // Assert - Should accept null for optional field with 201 Created
+        TestHelper.assertStatusCode(response, 201);
         
         // Cleanup
-        if (statusCode == 200) {
-            String pollId = response.jsonPath().getString("id");
-            if (pollId != null) {
-                testDataManager.getCreatedResourceIds().add(pollId);
-            }
+        String pollId = response.jsonPath().getString("id");
+        if (pollId != null) {
+            testDataManager.getCreatedResourceIds().add(pollId);
         }
     }
 }

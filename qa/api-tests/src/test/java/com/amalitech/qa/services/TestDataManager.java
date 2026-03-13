@@ -40,7 +40,6 @@ public class TestDataManager {
     /**
      * Creates a test poll with default values for quick test data setup.
      * Includes all required fields per API specification:
-     * - title (required)
      * - question (required)
      * - description (optional)
      * - options (required)
@@ -53,7 +52,6 @@ public class TestDataManager {
      */
     public String createTestPollWithDefaults() {
         Map<String, Object> defaultPoll = new HashMap<>();
-        defaultPoll.put("title", "Test Poll " + System.currentTimeMillis());
         defaultPoll.put("question", "Test Question: " + UUID.randomUUID().toString());
         defaultPoll.put("description", "Test Description");
         defaultPoll.put("options", Arrays.asList("Option 1", "Option 2", "Option 3"));
