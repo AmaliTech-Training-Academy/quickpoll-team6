@@ -18,8 +18,26 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ../backend
+    container_name: quickpoll-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/quickpoll
+      DB_USERNAME: quickpoll
+      DB_PASSWORD: quickpoll123
+      JWT_SECRET: local-dev-jwt-secret-change-me
+      JWT_EXPIRATION: "86400000"
+    ports:
+      - "8080:8080"
+
   data-pipeline:
-    build: .
+    build:
+      context: .
     container_name: qp-data-pipeline
     restart: on-failure
     depends_on:
@@ -27,8 +45,6 @@ services:
         condition: service_healthy
     environment:
       ENVIRONMENT: local-dev
-      # Force the local stack to stay self-contained even if .env contains
-      # staging credentials for a shared remote database.
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: quickpoll
@@ -41,6 +57,19 @@ services:
       FORCE_FULL_BACKFILL: ${FORCE_FULL_BACKFILL:-false}
     volumes:
       - ./data:/app/data
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: data-engineering/docker/frontend.local.Dockerfile
+      args:
+        API_BASE_URL: ${FRONTEND_API_BASE_URL:-https://nonmoral-zachariah-unindignant.ngrok-free.dev/api}
+    container_name: quickpoll-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:8080"
 
 volumes:
   pgdata:
