@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@ang
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@/services/auth.service';
+import { parseApiError } from '@/utils/api-error';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 import { PasswordFieldComponent } from '@/components/ui/primitives/password-field.component';
@@ -147,8 +149,8 @@ export class LoginComponent implements OnInit {
     const { email, password } = this.loginForm.value;
     this.authService.login(email!, password!).subscribe({
       next: () => this.router.navigate(['/~']),
-      error: (err) => {
-        this.error = 'Problem signing in';
+      error: (err: HttpErrorResponse) => {
+        this.error = parseApiError(err, 'Problem signing in. Please check your credentials.');
         this.loading.set(false);
       },
     });

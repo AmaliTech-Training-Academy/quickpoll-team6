@@ -5,6 +5,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { parseApiError } from '@/utils/api-error';
 import {
   CdkDrag,
   CdkDragDrop,
@@ -809,9 +811,9 @@ export class CreatePollComponent {
       })
       .subscribe({
         next: (res: any) => this.router.navigate(['/~/polls', res.id, 'details']),
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.isSubmitting.set(false);
-          this.error = 'Failed to create poll. Please try again.';
+          this.error = parseApiError(err, 'Failed to create poll. Please try again.');
           this.cdr.markForCheck();
         },
       });

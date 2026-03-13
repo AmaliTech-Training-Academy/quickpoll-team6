@@ -9,7 +9,9 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@/services/auth.service';
+import { parseApiError } from '@/utils/api-error';
 import { DepartmentService } from '@/services/department.service';
 import { Department } from '@/models';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
@@ -291,8 +293,8 @@ export class RegisterComponent implements OnInit {
 
     this.authService.register(name, email!, password!, deptId).subscribe({
       next: () => this.router.navigateByUrl('/~/polls'),
-      error: () => {
-        this.error = 'Registration failed. Please try again.';
+      error: (err: HttpErrorResponse) => {
+        this.error = parseApiError(err, 'Registration failed. Please try again.');
         this.loading.set(false);
       },
     });

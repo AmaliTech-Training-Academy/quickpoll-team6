@@ -1,27 +1,22 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: qp-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
 
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: qp-kafka
-    depends_on:
-      - zookeeper
+  postgres:
+    image: postgres:17
+    container_name: qp-postgres
+    environment:
+      POSTGRES_DB: quickpoll
+      POSTGRES_USER: quickpoll
+      POSTGRES_PASSWORD: quickpoll123
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./data-engineering/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U quickpoll -d quickpoll"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
     build: ./backend
@@ -29,24 +24,66 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:-Z29vZC1zZWNyZXQta2V5LWZvcg}
-
-  data-pipeline:
-    build: ./data-engineering
-    container_name: qp-data-pipeline
-    env_file:
-      - ./data-engineering/.env.data-pipeline
+      DB_URL: jdbc:postgresql://postgres:5432/quickpoll
+      DB_USERNAME: quickpoll
+      DB_PASSWORD: quickpoll123
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-key-for-testing-min-32-chars}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      kafka:
+      postgres:
         condition: service_healthy
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend/src
+        - action: rebuild
+          path: ./backend/pom.xml
 
   frontend:
     build: ./frontend
     container_name: quickpoll-frontend
     ports:
-      - "4200:8080"
+      - "4200:80"
     depends_on:
       - backend
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend/src
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/angular.json
+        - action: rebuild
+          path: ./frontend/nginx.conf
+
+  data-pipeline:
+    build: ./data-engineering
+    container_name: qp-data-pipeline
+    environment:
+      ENVIRONMENT: local-dev
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: quickpoll
+      DB_USER: quickpoll
+      DB_PASSWORD: quickpoll123
+      LOG_LEVEL: INFO
+      DLQ_DIR: data/dlq
+      FORCE_FULL_BACKFILL: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    develop:
+      watch:
+        - action: rebuild
+          path: ./data-engineering/src
+        - action: rebuild
+          path: ./data-engineering/scripts
+        - action: rebuild
+          path: ./data-engineering/requirements.txt
+
+volumes:
+  pgdata:

@@ -14,6 +14,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { hugeView, hugeSquareLock02, hugeUser, hugeCancel01 } from '@ng-icons/huge-icons';
 import { User, Poll } from '@/models';
 import { AuthService } from '@/services/auth.service';
+import { parseApiError } from '@/utils/api-error';
 import { ButtonComponent } from './primitives/button.component';
 import { PollService } from '@/services/poll.service';
 
@@ -210,10 +211,9 @@ export class PollCardComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.isSubmitting.set(false);
         if (error.status === 409) {
-          this.voteError.set('You have already voted on this poll.');
           this.voted.set(true);
         } else {
-          this.voteError.set('Failed to submit vote. Please try again.');
+          this.voteError.set(parseApiError(error, 'Failed to submit vote. Please try again.'));
         }
       },
     });

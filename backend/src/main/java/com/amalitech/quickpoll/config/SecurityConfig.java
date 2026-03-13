@@ -42,7 +42,8 @@ public class SecurityConfig {
                         "http://localhost:8080",
                         "http://quickpoll-frontend",
                         "http://quickpoll-frontend:80",
-                        "https://nonmoral-zachariah-unindignant.ngrok-free.dev"
+                        "https://nonmoral-zachariah-unindignant.ngrok-free.dev",
+                        "https://port-4200.henryantwi.me"
                    ));
                     config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
                     config.setAllowedHeaders(List.of("*"));
