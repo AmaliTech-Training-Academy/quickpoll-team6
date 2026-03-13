@@ -20,8 +20,8 @@ public interface TimeseriesRepository extends JpaRepository<AnalyticsVotesTimese
             SELECT poll_id, bucket_time, votes_in_bucket, recorded_at, id
             FROM analytics_votes_timeseries
             WHERE poll_id = :pollId
-              AND (:from IS NULL OR bucket_time >= :from)
-              AND (:to   IS NULL OR bucket_time <= :to)
+              AND (CAST(:from AS TIMESTAMP) IS NULL OR bucket_time >= CAST(:from AS TIMESTAMP))
+              AND (CAST(:to AS TIMESTAMP)   IS NULL OR bucket_time <= CAST(:to AS TIMESTAMP))
             ORDER BY bucket_time ASC
             """, nativeQuery = true)
     List<AnalyticsVotesTimeseries> findByPollIdAndOptionalRange(

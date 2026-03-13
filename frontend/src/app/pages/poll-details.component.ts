@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PollService } from '@/services/poll.service';
 import { Poll } from '@/models';
 import { DatePipe } from '@angular/common';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
 
 @Component({
   selector: 'app-poll-details',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink, ButtonComponent],
   template: `
     @if (loading()) {
       <div class="animate-pulse space-y-4">
@@ -21,6 +22,26 @@ import { DatePipe } from '@angular/common';
       </div>
     } @else if (poll()) {
       <div class="space-y-6">
+        <!-- Action buttons -->
+        <div class="flex items-center gap-2">
+          <button
+            app-button
+            variant="primary"
+            size="sm"
+            [routerLink]="['/~/polls', pollId]"
+          >
+            View Results
+          </button>
+          <button
+            app-button
+            variant="outline"
+            size="sm"
+            routerLink="/~/polls/new"
+          >
+            Create New Poll
+          </button>
+        </div>
+
         <div class="bg-surface border rounded-xl p-5 space-y-4">
           <div class="flex items-start justify-between">
             <div>
@@ -76,16 +97,17 @@ export class PollDetailsComponent implements OnInit {
   readonly poll = signal<Poll | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  pollId = 0;
 
   ngOnInit() {
-    const id = Number(this.route.parent?.snapshot.paramMap.get('id'));
-    if (!id) {
+    this.pollId = Number(this.route.parent?.snapshot.paramMap.get('id'));
+    if (!this.pollId) {
       this.error.set('Poll not found');
       this.loading.set(false);
       return;
     }
 
-    this.pollService.getById(id).subscribe({
+    this.pollService.getById(this.pollId).subscribe({
       next: (poll: Poll) => {
         this.poll.set(poll);
         this.loading.set(false);

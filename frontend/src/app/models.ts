@@ -51,6 +51,7 @@ export interface Poll {
   createdAt: string;
   status: string;
   options: PollOption[];
+  hasVoted?: boolean;
 }
 
 export interface PollOption {

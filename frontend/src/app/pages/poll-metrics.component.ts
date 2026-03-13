@@ -121,8 +121,9 @@ interface TrendRow {
         </div>
       </div>
     } @else {
-      <div class="text-center py-12">
-        <p class="text-muted-foreground">{{ error() || 'Poll not found.' }}</p>
+      <div class="text-center py-12 space-y-3">
+        <p class="text-muted-foreground">Results are not available yet.</p>
+        <p class="text-sm text-muted-foreground/60">Check back once votes have been cast on this poll.</p>
       </div>
     }
   `,
@@ -160,7 +161,7 @@ export class PollMetricsComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Failed to load poll metrics.');
+        this.error.set(null);
         this.loading.set(false);
       },
     });
