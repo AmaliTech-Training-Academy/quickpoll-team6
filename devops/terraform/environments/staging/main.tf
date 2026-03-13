@@ -97,6 +97,7 @@ module "rds" {
   environment = local.environment
 
   private_db_subnet_ids = module.vpc.private_db_subnet_ids
+  db_subnet_ids         = module.vpc.public_subnet_ids
   db_sg_id              = module.security_groups.db_sg_id
 
   instance_class = "db.t3.micro"
@@ -110,6 +111,7 @@ module "rds" {
   backup_retention_period = 3
   skip_final_snapshot     = true
   deletion_protection     = false
+  publicly_accessible     = true
 
   tags = local.common_tags
 }
@@ -142,7 +144,7 @@ module "ecs" {
 
       environment_vars = [
         { name = "SPRING_PROFILES_ACTIVE", value = "staging" },
-        { name = "DB_URL", value = "jdbc:postgresql://${module.rds.db_host}:${module.rds.db_port}/${module.rds.db_name}" },
+        { name = "DB_URL", value = "jdbc:postgresql://${var.db_host}:${var.db_port}/${var.db_name}?sslmode=${var.db_sslmode}" },
         { name = "DB_USERNAME", value = var.db_username },
         { name = "DB_PASSWORD", value = var.db_password },
         { name = "JWT_SECRET", value = var.jwt_secret },
@@ -186,10 +188,11 @@ module "ecs_task_data_engineering" {
 
   environment_vars = [
     { name = "ENVIRONMENT",               value = "staging" },
-    { name = "DB_HOST",                   value = module.rds.db_host },
-    { name = "DB_PORT",                   value = tostring(module.rds.db_port) },
-    { name = "DB_NAME",                   value = module.rds.db_name },
+    { name = "DB_HOST",                   value = var.db_host },
+    { name = "DB_PORT",                   value = tostring(var.db_port) },
+    { name = "DB_NAME",                   value = var.db_name },
     { name = "DB_USER",                   value = var.db_username },
+    { name = "DB_SSLMODE",                value = var.db_sslmode },
     { name = "LOG_LEVEL",                 value = "INFO" },
     { name = "DLQ_DIR",                   value = "data/dlq" },
     { name = "BACKFILL_INTERVAL_MINUTES", value = "30" },

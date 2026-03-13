@@ -11,6 +11,12 @@ variable "private_db_subnet_ids" {
   type        = list(string)
 }
 
+variable "db_subnet_ids" {
+  description = "Optional subnet IDs for RDS (use to override private DB subnets)"
+  type        = list(string)
+  default     = []
+}
+
 variable "db_sg_id" {
   description = "Security group ID for the RDS instance"
   type        = string
@@ -68,6 +74,12 @@ variable "skip_final_snapshot" {
 
 variable "deletion_protection" {
   description = "Prevent accidental RDS deletion (set true in production)"
+  type        = bool
+  default     = false
+}
+
+variable "publicly_accessible" {
+  description = "Whether the DB instance is publicly accessible"
   type        = bool
   default     = false
 }

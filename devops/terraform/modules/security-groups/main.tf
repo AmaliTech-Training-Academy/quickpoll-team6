@@ -72,6 +72,14 @@ resource "aws_security_group" "data_engineering" {
   }
 
   egress {
+    description = "PostgreSQL to external managed DB (e.g., DigitalOcean)"
+    from_port   = 25060
+    to_port     = 25060
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
     description = "HTTPS to AWS services (ECR, CloudWatch, Secrets Manager)"
     from_port   = 443
     to_port     = 443

@@ -30,7 +30,22 @@ variable "private_db_subnet_cidrs" {
 
 variable "db_name" {
   type    = string
-  default = "quickpoll"
+  default = "defaultdb"
+}
+
+variable "db_host" {
+  type    = string
+  default = "quick-poll-do-user-31013824-0.d.db.ondigitalocean.com"
+}
+
+variable "db_port" {
+  type    = number
+  default = 25060
+}
+
+variable "db_sslmode" {
+  type    = string
+  default = "require"
 }
 
 # Provide via: export TF_VAR_db_username="..."

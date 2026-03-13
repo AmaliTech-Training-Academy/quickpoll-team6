@@ -1,7 +1,7 @@
 # ── DB Subnet Group ───────────────────────────────────────────────────────────
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project}-${var.environment}-db-subnet-group"
-  subnet_ids = var.private_db_subnet_ids
+  subnet_ids = length(var.db_subnet_ids) > 0 ? var.db_subnet_ids : var.private_db_subnet_ids
 
   tags = merge(var.tags, { Name = "${var.project}-${var.environment}-db-subnet-group" })
 }
@@ -25,6 +25,7 @@ resource "aws_db_instance" "postgres" {
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.db_sg_id]
+  publicly_accessible    = var.publicly_accessible
 
   # multi_az = true in production for high availability
   multi_az = var.multi_az
