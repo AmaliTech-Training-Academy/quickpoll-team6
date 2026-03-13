@@ -198,12 +198,79 @@ def _users_df() -> pd.DataFrame:
 _BACKFILL_MOD = "data_engineering.pipeline.backfill"
 
 
+class TestBackfillBootstrap:
+    """Tests for schema and trigger bootstrapping inside the backfill flow."""
+
+    @patch(f"{_BACKFILL_MOD}.deploy_triggers")
+    @patch(f"{_BACKFILL_MOD}.create_analytics_tables")
+    @patch(f"{_BACKFILL_MOD}.get_engine")
+    def test_ensure_analytics_bootstrap_creates_tables_before_triggers(
+        self,
+        mock_get_engine,
+        mock_create_tables,
+        mock_deploy_triggers,
+    ) -> None:
+        """Analytics tables must exist before the trigger SQL runs."""
+        from data_engineering.pipeline.backfill import _ensure_analytics_bootstrap
+
+        engine = MagicMock()
+        call_order: list[tuple[str, object]] = []
+        mock_get_engine.return_value = engine
+        mock_create_tables.side_effect = lambda value: call_order.append(
+            ("tables", value)
+        )
+        mock_deploy_triggers.side_effect = lambda value: call_order.append(
+            ("triggers", value)
+        )
+
+        _ensure_analytics_bootstrap()
+
+        assert call_order == [("tables", engine), ("triggers", engine)]
+
+    @patch(f"{_BACKFILL_MOD}._full_backfill")
+    @patch(f"{_BACKFILL_MOD}.get_watermark", return_value=None)
+    @patch(f"{_BACKFILL_MOD}.deploy_triggers")
+    @patch(f"{_BACKFILL_MOD}.create_analytics_tables")
+    @patch(f"{_BACKFILL_MOD}.get_engine")
+    def test_run_backfill_bootstraps_before_reading_watermarks(
+        self,
+        mock_get_engine,
+        mock_create_tables,
+        mock_deploy_triggers,
+        mock_get_watermark,
+        mock_full_backfill,
+    ) -> None:
+        """run_backfill should bootstrap the analytics layer before watermark IO."""
+        from data_engineering.pipeline.backfill import run_backfill
+
+        call_order: list[str] = []
+        mock_get_engine.return_value = MagicMock()
+        mock_create_tables.side_effect = lambda engine: call_order.append("tables")
+        mock_deploy_triggers.side_effect = lambda engine: call_order.append("triggers")
+        mock_get_watermark.side_effect = lambda entity: (
+            call_order.append(f"watermark:{entity}") or None
+        )
+        mock_full_backfill.side_effect = lambda: call_order.append("full")
+
+        run_backfill()
+
+        assert call_order == [
+            "tables",
+            "triggers",
+            "watermark:polls",
+            "watermark:votes",
+            "watermark:users",
+            "full",
+        ]
+
+
 # ── Full backfill tests ─────────────────────────────────────────────────────
 
 
 class TestFullBackfill:
     """Tests for full backfill behaviour (no watermarks or forced)."""
 
+    @patch(f"{_BACKFILL_MOD}._ensure_analytics_bootstrap")
     @patch(f"{_BACKFILL_MOD}.set_watermark")
     @patch(f"{_BACKFILL_MOD}.upsert_user_participation")
     @patch(f"{_BACKFILL_MOD}.upsert_votes_timeseries")
@@ -236,7 +303,8 @@ class TestFullBackfill:
         mock_upsert_ts,
         mock_upsert_up,
         mock_set_wm,
-    ):
+        mock_bootstrap,
+    ) -> None:
         """When any watermark is None, full extractors should be called."""
         from data_engineering.pipeline.backfill import run_backfill
 
@@ -249,6 +317,7 @@ class TestFullBackfill:
         mock_upsert_ps.assert_called_once()
         mock_upsert_ob.assert_called_once()
 
+    @patch(f"{_BACKFILL_MOD}._ensure_analytics_bootstrap")
     @patch(f"{_BACKFILL_MOD}.FORCE_FULL_BACKFILL", True)
     @patch(f"{_BACKFILL_MOD}.set_watermark")
     @patch(f"{_BACKFILL_MOD}.upsert_user_participation")
@@ -282,7 +351,8 @@ class TestFullBackfill:
         mock_upsert_ts,
         mock_upsert_up,
         mock_set_wm,
-    ):
+        mock_bootstrap,
+    ) -> None:
         """FORCE_FULL_BACKFILL=True triggers full backfill even with watermarks."""
         from data_engineering.pipeline.backfill import run_backfill
 
@@ -299,6 +369,7 @@ class TestFullBackfill:
 class TestIncrementalBackfill:
     """Tests for incremental backfill behaviour (watermarks exist)."""
 
+    @patch(f"{_BACKFILL_MOD}._ensure_analytics_bootstrap")
     @patch(f"{_BACKFILL_MOD}.set_watermark")
     @patch(f"{_BACKFILL_MOD}.upsert_user_participation")
     @patch(f"{_BACKFILL_MOD}.upsert_votes_timeseries")
@@ -319,7 +390,8 @@ class TestIncrementalBackfill:
         mock_upsert_ts,
         mock_upsert_up,
         mock_set_wm,
-    ):
+        mock_bootstrap,
+    ) -> None:
         """When all deltas are empty, no upserts should be called."""
         from data_engineering.pipeline.backfill import run_backfill
 
@@ -331,6 +403,7 @@ class TestIncrementalBackfill:
         mock_upsert_up.assert_not_called()
         mock_set_wm.assert_not_called()
 
+    @patch(f"{_BACKFILL_MOD}._ensure_analytics_bootstrap")
     @patch(f"{_BACKFILL_MOD}.set_watermark")
     @patch(f"{_BACKFILL_MOD}.upsert_user_participation")
     @patch(f"{_BACKFILL_MOD}.upsert_votes_timeseries")
@@ -384,7 +457,8 @@ class TestIncrementalBackfill:
         mock_upsert_ts,
         mock_upsert_up,
         mock_set_wm,
-    ):
+        mock_bootstrap,
+    ) -> None:
         """New votes should trigger recompute for their poll_ids."""
         from data_engineering.pipeline.backfill import run_backfill
 
@@ -396,6 +470,7 @@ class TestIncrementalBackfill:
         # user_id=10 from vote delta should trigger user recompute
         mock_users_by_ids.assert_called_once_with([10])
 
+    @patch(f"{_BACKFILL_MOD}._ensure_analytics_bootstrap")
     @patch(f"{_BACKFILL_MOD}.set_watermark")
     @patch(f"{_BACKFILL_MOD}.upsert_user_participation")
     @patch(f"{_BACKFILL_MOD}.upsert_votes_timeseries")
@@ -449,7 +524,8 @@ class TestIncrementalBackfill:
         mock_upsert_ts,
         mock_upsert_up,
         mock_set_wm,
-    ):
+        mock_bootstrap,
+    ) -> None:
         """set_watermark should be called with MAX timestamp from deltas."""
         from data_engineering.pipeline.backfill import run_backfill
 

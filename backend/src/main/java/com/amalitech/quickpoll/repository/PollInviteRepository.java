@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,6 +17,9 @@ public interface PollInviteRepository extends JpaRepository<PollInvite, Long> {
     Optional<PollInvite> findByPollIdAndMemberEmail(@Param("pollId") Long pollId, @Param("email") String email);
     
     boolean existsByPollIdAndDepartmentMemberEmailAndVoteStatus(Long pollId, String email, VoteStatus voteStatus);
+
+    @Query("SELECT pi.poll.id FROM PollInvite pi WHERE pi.departmentMember.email = :email AND pi.poll.id IN :pollIds AND pi.voteStatus = com.amalitech.quickpoll.model.enums.VoteStatus.VOTED")
+    List<Long> findVotedPollIdsByEmailAndPollIds(@Param("email") String email, @Param("pollIds") List<Long> pollIds);
 
     @Modifying
     @Query("DELETE FROM PollInvite i WHERE i.poll.id = :pollId")

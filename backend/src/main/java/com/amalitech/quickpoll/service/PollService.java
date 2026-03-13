@@ -119,6 +119,9 @@ public class PollService {
             throw new IllegalArgumentException(
                     "Maximum selections cannot exceed the number of options (" + request.getOptions().size() + ")");
         }
+        if (request.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Expiration time must be in the future");
+        }
 
         Poll poll = pollMapper.toEntity(request, creator);
         log.info("Creating poll: {}", poll);
@@ -357,9 +360,12 @@ public class PollService {
         Map<Long, Poll> pollMap = pollsWithOptions.stream()
                 .collect(java.util.stream.Collectors.toMap(Poll::getId, p -> p));
 
+        List<Long> votedPollIds = pollInviteRepository.findVotedPollIdsByEmailAndPollIds(email, pollIds);
+        java.util.Set<Long> votedSet = new java.util.HashSet<>(votedPollIds);
+
         List<PollBasicResponse> responses = polls.getContent().stream()
                 .map(p -> pollMap.getOrDefault(p.getId(), p))
-                .map(this::toBasicResponse)
+                .map(p -> toBasicResponse(p, votedSet.contains(p.getId())))
                 .toList();
 
         return new PageImpl<>(responses, pageable, polls.getTotalElements());
@@ -392,7 +398,7 @@ public class PollService {
         return response;
     }
 
-    private PollBasicResponse toBasicResponse(Poll poll) {
+    private PollBasicResponse toBasicResponse(Poll poll, boolean hasVoted) {
         List<OptionBasicResponse> optionResponses = poll.getOptions().stream()
                 .map(o -> new OptionBasicResponse(o.getId(), o.getOptionText()))
                 .toList();
@@ -408,6 +414,7 @@ public class PollService {
         response.setStatus(poll.isActive() ? "ACTIVE" : "CLOSED");
         response.setCreatedAt(poll.getCreatedAt());
         response.setOptions(optionResponses);
+        response.setHasVoted(hasVoted);
         return response;
     }
 }

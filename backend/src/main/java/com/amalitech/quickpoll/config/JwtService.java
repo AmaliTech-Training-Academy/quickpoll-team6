@@ -60,6 +60,11 @@ public class JwtService {
         }
     }
 
+    public Date getExpirationDate(String token) {
+        return Jwts.parser().verifyWith(signingKey).build()
+                .parseSignedClaims(token).getPayload().getExpiration();
+    }
+
     public String generateRefreshToken(String email,String role){
         return Jwts.builder()
                 .subject(email)

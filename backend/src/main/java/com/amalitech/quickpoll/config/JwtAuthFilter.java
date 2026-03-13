@@ -1,6 +1,7 @@
 package com.amalitech.quickpoll.config;
 
 import com.amalitech.quickpoll.repository.UserRepository;
+import com.amalitech.quickpoll.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -46,7 +48,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             String token = authHeader.substring(7);
-            if (!jwtService.isTokenValid(token)) {
+            if (!jwtService.isTokenValid(token) || tokenBlacklistService.isBlacklisted(token)) {
                 authenticationEntryPoint.commence(request, response, 
                     new org.springframework.security.authentication.BadCredentialsException("Invalid or expired token"));
                 return;

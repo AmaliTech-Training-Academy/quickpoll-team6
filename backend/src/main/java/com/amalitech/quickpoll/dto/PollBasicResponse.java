@@ -16,4 +16,5 @@ public class PollBasicResponse {
     private String status;
     private LocalDateTime createdAt;
     private List<OptionBasicResponse> options;
+    private boolean hasVoted;
 }

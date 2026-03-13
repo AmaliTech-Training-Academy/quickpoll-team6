@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Department } from '@/models';
+import { Department, DepartmentRequest, DepartmentResponse } from '@/models';
 import { API_BASE_URL } from '@/constants';
 
 @Injectable({ providedIn: 'root' })
@@ -15,5 +15,9 @@ export class DepartmentService {
 
   getById(id: number): Observable<Department> {
     return this.http.get<Department>(`${this.departmentsApiUrl}/${id}`);
+  }
+
+  create(request: DepartmentRequest): Observable<DepartmentResponse> {
+    return this.http.post<DepartmentResponse>(this.departmentsApiUrl, request);
   }
 }

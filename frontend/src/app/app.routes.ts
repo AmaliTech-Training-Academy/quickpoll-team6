@@ -16,6 +16,7 @@ import { PollDetailsLayoutComponent } from './components/layout/poll-details-lay
 import { pollCreatorGuard } from './guards/poll-creator.guard';
 import { PermissionDeniedComponent } from './pages/403.component';
 import { CreatedPollListComponent } from './pages/created-poll-list.component';
+import { DashboardComponent } from './pages/dashboard.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', component: LandingComponent },
@@ -32,6 +33,10 @@ export const routes: Routes = [
         path: '',
         redirectTo: 'polls',
         pathMatch: 'full',
+      },
+      {
+        path: 'dashboard',
+        component: DashboardComponent,
       },
       {
         path: 'polls',

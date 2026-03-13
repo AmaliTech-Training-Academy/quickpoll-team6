@@ -40,6 +40,8 @@ public class SecurityConfig {
                         "http://localhost:3000",
                         "http://0.0.0.0:4200",
                         "http://localhost:8080",
+                        "http://quickpoll-frontend",
+                        "http://quickpoll-frontend:80",
                         "https://nonmoral-zachariah-unindignant.ngrok-free.dev"
                    ));
                     config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, catchError, of } from 'rxjs';
 import { API_BASE_URL } from '@/constants';
 import { AuthResponse, User } from '@/models';
 
@@ -35,8 +35,14 @@ export class AuthService {
       );
   }
 
-  logout(): void {
-    localStorage.removeItem(this.AUTH_TOKEN_KEY);
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.authApiUrl}/logout`, {}).pipe(
+      tap(() => localStorage.removeItem(this.AUTH_TOKEN_KEY)),
+      catchError(() => {
+        localStorage.removeItem(this.AUTH_TOKEN_KEY);
+        return of(undefined as void);
+      }),
+    );
   }
 
   isLoggedIn(): boolean {

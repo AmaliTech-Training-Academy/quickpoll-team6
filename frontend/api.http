@@ -1,0 +1,111 @@
+@baseUrl = https://nonmoral-zachariah-unindignant.ngrok-free.dev/api
+
+### Register User 1 - Henry Antwi (Dept 1)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Henry Antwi",
+  "email": "henry.antwi@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 1
+}
+
+### Register User 2 - Kwame Mensah (Dept 1)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Kwame Mensah",
+  "email": "kwame.mensah@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 1
+}
+
+### Register User 3 - Ama Serwaa (Dept 2)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Ama Serwaa",
+  "email": "ama.serwaa@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 2
+}
+
+### Register User 4 - Kofi Boateng (Dept 2)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Kofi Boateng",
+  "email": "kofi.boateng@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 2
+}
+
+### Register User 5 - Abena Osei (Dept 3)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Abena Osei",
+  "email": "abena.osei@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 3
+}
+
+### Register User 6 - Yaw Frimpong (Dept 3)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Yaw Frimpong",
+  "email": "yaw.frimpong@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 3
+}
+
+### Register User 7 - Efua Darko (Dept 4)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Efua Darko",
+  "email": "efua.darko@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 4
+}
+
+### Register User 8 - Nana Adu (Dept 4)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Nana Adu",
+  "email": "nana.adu@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 4
+}
+
+### Register User 9 - Akua Pomaa (Dept 5)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Akua Pomaa",
+  "email": "akua.pomaa@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 5
+}
+
+### Register User 10 - Fiifi Tagoe (Dept 5)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Fiifi Tagoe",
+  "email": "fiifi.tagoe@amalitech.com",
+  "password": "Password@123",
+  "departmentId": 5
+}

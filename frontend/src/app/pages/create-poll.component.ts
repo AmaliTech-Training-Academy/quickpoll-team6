@@ -31,6 +31,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { PollService } from '@/services/poll.service';
+import { DepartmentService } from '@/services/department.service';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 import { TextareaComponent } from '@/components/ui/primitives/textarea.component';
 import { ButtonComponent } from '@/components/ui/primitives/button.component';
@@ -530,8 +531,11 @@ function maxSelectionsValidator(getOptions: () => string[]): ValidatorFn {
 export class CreatePollComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly pollService = inject(PollService);
+  private readonly departmentService = inject(DepartmentService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  private allDepartmentIds: number[] = [];
 
   protected newPollForm = this.formBuilder.group({
     question: ['', Validators.required],
@@ -556,6 +560,12 @@ export class CreatePollComponent {
     this.newPollForm.controls.maxSelections.addValidators(
       maxSelectionsValidator(() => this.getOptions()),
     );
+
+    this.departmentService.getAll().subscribe({
+      next: (departments) => {
+        this.allDepartmentIds = departments.map((d) => d.id);
+      },
+    });
   }
 
   getOptions(): string[] {
@@ -781,6 +791,11 @@ export class CreatePollComponent {
     this.newPollForm.controls.maxSelections.updateValueAndValidity();
     this.newPollForm.controls.audience.updateValueAndValidity();
 
+    const resolvedDepartmentIds =
+      audience === 'department'
+        ? (departmentIds ?? [])
+        : this.allDepartmentIds;
+
     this.pollService
       .create({
         question: trimmedQuestion,
@@ -790,10 +805,10 @@ export class CreatePollComponent {
         multipleChoice: allowsMultipleSelections,
         anonymous,
         expiresAt: normalizedExpiresAt,
-        departmentIds: audience === 'department' ? (departmentIds ?? []) : [],
+        departmentIds: resolvedDepartmentIds,
       })
       .subscribe({
-        next: (res: any) => this.router.navigate(['/~/polls', res.id]),
+        next: (res: any) => this.router.navigate(['/~/polls', res.id, 'details']),
         error: () => {
           this.isSubmitting.set(false);
           this.error = 'Failed to create poll. Please try again.';

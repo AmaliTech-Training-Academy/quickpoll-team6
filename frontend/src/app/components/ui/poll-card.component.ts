@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   input,
   OnInit,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { hugeView, hugeSquareLock02, hugeUser, hugeCancel01 } from '@ng-icons/huge-icons';
 import { User, Poll } from '@/models';
@@ -23,6 +25,7 @@ import { PollService } from '@/services/poll.service';
   template: `
     <div
       class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6"
+      [class.opacity-75]="voted()"
       [attr.data-test-id]="'poll-card-' + poll().id"
     >
       <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -37,6 +40,19 @@ import { PollService } from '@/services/poll.service';
                 <span class="px-1 py-0.5 ml-1 rounded-md bg-muted">me</span>
               }
             </p>
+            @if (voted()) {
+              <span
+                class="ml-auto text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
+              >
+                Voted
+              </span>
+            }
+            <span
+              class="text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
+              [class.ml-auto]="!voted()"
+            >
+              {{ poll().status }}
+            </span>
           </div>
           <h2>
             @if (userIsOwner()) {
@@ -79,49 +95,58 @@ import { PollService } from '@/services/poll.service';
         }
       </div>
 
-      <ul class="mt-4 space-y-3" [attr.data-test-id]="'poll-card-options-list-' + poll().id">
-        @for (opt of poll().options; track opt.id) {
-          <li [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id">
-            <div
-              [class.border-primary]="selections().includes(opt.id)"
-              [class.opacity-50]="maxSelectionsReached() && !selections().includes(opt.id)"
-              [class.cursor-not-allowed]="maxSelectionsReached() && !selections().includes(opt.id)"
-              [class.pointer-events-none]="maxSelectionsReached() && !selections().includes(opt.id)"
-              class="gap-3 text-left px-3 h-12 pr-2 rounded-md text-xs w-full flex items-center justify-between font-normal border hover:border-primary/40"
-              (click)="addSelection(opt.id)"
-            >
-              <span class="text-foreground">{{ opt.text }}</span>
-              @if (selections().includes(opt.id)) {
-                <div class="flex items-center gap-1">
-                  <button
-                    app-button
-                    variant="outline"
-                    size="sm"
-                    class="size-9! p-0!"
-                    (click)="removeSelection(opt.id); $event.stopPropagation()"
-                  >
-                    <ng-icon name="hugeCancel01" />
-                  </button>
-                </div>
-              }
+      @if (voted()) {
+        <div class="mt-4 rounded-md border bg-muted px-4 py-3 text-sm text-muted-foreground">
+          You have already voted on this poll.
+        </div>
+      } @else {
+        <ul class="mt-4 space-y-3" [attr.data-test-id]="'poll-card-options-list-' + poll().id">
+          @for (opt of poll().options; track opt.id) {
+            <li [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id">
+              <div
+                [class.border-primary]="selections().includes(opt.id)"
+                [class.opacity-50]="maxSelectionsReached() && !selections().includes(opt.id)"
+                [class.cursor-not-allowed]="maxSelectionsReached() && !selections().includes(opt.id)"
+                [class.pointer-events-none]="maxSelectionsReached() && !selections().includes(opt.id)"
+                class="gap-3 text-left px-3 h-12 pr-2 rounded-md text-xs w-full flex items-center justify-between font-normal border hover:border-primary/40"
+                (click)="addSelection(opt.id)"
+              >
+                <span class="text-foreground">{{ opt.text }}</span>
+                @if (selections().includes(opt.id)) {
+                  <div class="flex items-center gap-1">
+                    <button
+                      app-button
+                      variant="outline"
+                      size="sm"
+                      class="size-9! p-0!"
+                      (click)="removeSelection(opt.id); $event.stopPropagation()"
+                    >
+                      <ng-icon name="hugeCancel01" />
+                    </button>
+                  </div>
+                }
+              </div>
+            </li>
+          }
+          @if (selections().length > 0) {
+            <div class="text-xs text-muted-foreground mt-2">
+              {{ selections().length }} selected (max {{ poll().maxSelections }})
             </div>
-          </li>
-        }
-        @if (selections().length > 0) {
-          <div class="text-xs text-muted-foreground mt-2">
-            {{ selections().length }} selected (max {{ poll().maxSelections }})
-          </div>
-        }
-        @if (selections().length > 0) {
-          <button app-button variant="primary" (click)="castVote()" [disabled]="isSubmitting()">
-            @if (isSubmitting()) {
-              Submitting...
-            } @else {
-              Submit
-            }
-          </button>
-        }
-      </ul>
+          }
+          @if (voteError()) {
+            <p class="text-sm text-red-600 mt-1">{{ voteError() }}</p>
+          }
+          @if (selections().length > 0) {
+            <button app-button variant="primary" (click)="castVote()" [disabled]="isSubmitting()">
+              @if (isSubmitting()) {
+                Submitting...
+              } @else {
+                Submit
+              }
+            </button>
+          }
+        </ul>
+      }
     </div>
   `,
 })
@@ -133,8 +158,19 @@ export class PollCardComponent implements OnInit {
   private authService = inject(AuthService);
   readonly pollService = inject(PollService);
 
+  protected readonly voted = signal(false);
   protected readonly selections = signal<number[]>([]);
   protected readonly isSubmitting = signal(false);
+  protected readonly voteError = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const poll = this.poll();
+      if (poll.hasVoted) {
+        this.voted.set(true);
+      }
+    });
+  }
 
   protected readonly maxSelectionsReached = computed(() => {
     const poll = this.poll();
@@ -164,12 +200,21 @@ export class PollCardComponent implements OnInit {
     }
 
     this.isSubmitting.set(true);
+    this.voteError.set(null);
     this.pollService.castVote(this.poll().id, this.selections()!).subscribe({
-      error: (error) => {
-        console.error('Error casting vote:', error);
-      },
-      complete: () => {
+      next: () => {
         this.isSubmitting.set(false);
+        this.selections.set([]);
+        this.voted.set(true);
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isSubmitting.set(false);
+        if (error.status === 409) {
+          this.voteError.set('You have already voted on this poll.');
+          this.voted.set(true);
+        } else {
+          this.voteError.set('Failed to submit vote. Please try again.');
+        }
       },
     });
   }

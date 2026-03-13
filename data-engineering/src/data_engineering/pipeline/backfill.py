@@ -12,7 +12,11 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from data_engineering.config import FORCE_FULL_BACKFILL, WATERMARK_OVERLAP_MINUTES
+from data_engineering.config import (
+    FORCE_FULL_BACKFILL,
+    WATERMARK_OVERLAP_MINUTES,
+    get_engine,
+)
 from data_engineering.ingestion.extractors import (
     # Full-table
     extract_options,
@@ -32,6 +36,8 @@ from data_engineering.ingestion.extractors import (
     extract_votes_since,
     get_total_users,
 )
+from data_engineering.loading.models import create_analytics_tables
+from data_engineering.loading.triggers import deploy_triggers
 from data_engineering.loading.writers import (
     get_watermark,
     set_watermark,
@@ -56,10 +62,14 @@ def run_backfill() -> None:
     """
     Watermark-aware backfill orchestrator.
 
+    Ensures analytics tables and trigger definitions exist before any reads or
+    writes so standalone backfill runs can bootstrap the analytics layer.
+
     - If FORCE_FULL_BACKFILL is True or any watermark is missing: full load
     - Otherwise: incremental extract → identify affected IDs →
       batch recompute → upsert → advance watermarks
     """
+    _ensure_analytics_bootstrap()
     watermarks = {e: get_watermark(e) for e in _ENTITIES}
 
     if FORCE_FULL_BACKFILL or any(wm is None for wm in watermarks.values()):
@@ -199,6 +209,14 @@ def _incremental_backfill(watermarks: dict[str, datetime]) -> None:
         _advance_watermark("users", delta_users, "updated_at")
 
     logger.info("Incremental backfill complete.")
+
+
+def _ensure_analytics_bootstrap() -> None:
+    """Create missing analytics tables and redeploy idempotent triggers."""
+    engine = get_engine()
+    create_analytics_tables(engine)
+    logger.info("Analytics tables ensured.")
+    deploy_triggers(engine)
 
 
 def _advance_watermark(entity: str, df: pd.DataFrame, timestamp_col: str) -> None:
