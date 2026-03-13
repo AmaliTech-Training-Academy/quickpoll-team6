@@ -1,0 +1,65 @@
+<div>POST to https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls</div>
+
+<h4>Body</h4>
+<div>
+    <pre class="preformated-text">
+{
+    &quot;question&quot;: &quot;Poll with maximum options&quot;,
+    &quot;description&quot;: &quot;Testing boundary - exactly 10 options&quot;,
+    &quot;options&quot;: [
+        &quot;Option 1&quot;,
+        &quot;Option 2&quot;,
+        &quot;Option 3&quot;,
+        &quot;Option 4&quot;,
+        &quot;Option 5&quot;,
+        &quot;Option 6&quot;,
+        &quot;Option 7&quot;,
+        &quot;Option 8&quot;,
+        &quot;Option 9&quot;,
+        &quot;Option 10&quot;
+    ],
+    &quot;maxSelections&quot;: 1,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-03-20T14:41:52.932886298&quot;,
+    &quot;multipleChoice&quot;: false
+}    </pre>
+</div>
+
+<h4>Headers</h4>
+<div>
+        <div>Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEyOTExMTcwQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMjkxMiwiZXhwIjoxNzczNDk5MzEyfQ.YnaQ3L2vwloX_pLktUw7CUQyCdjxQh8zaQlh7QzLOchTk4VBe2V2csaPH_cD5lZsNggbV3pCKOFbkByid4VzZQ</div>
+        <div>Accept: application/json, application/javascript, text/javascript, text/json</div>
+        <div>Content-Type: application/json</div>
+</div>
+
+
+
+<h4>Curl</h4>
+<div>
+curl -v -X POST &#39;https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls&#39; -H &#39;Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEyOTExMTcwQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMjkxMiwiZXhwIjoxNzczNDk5MzEyfQ.YnaQ3L2vwloX_pLktUw7CUQyCdjxQh8zaQlh7QzLOchTk4VBe2V2csaPH_cD5lZsNggbV3pCKOFbkByid4VzZQ&#39; -H &#39;Accept: application/json, application/javascript, text/javascript, text/json&#39; -H &#39;Content-Type: application/json&#39; -d &#39;{
+    &quot;question&quot;: &quot;Poll with maximum options&quot;,
+    &quot;description&quot;: &quot;Testing boundary - exactly 10 options&quot;,
+    &quot;options&quot;: [
+        &quot;Option 1&quot;,
+        &quot;Option 2&quot;,
+        &quot;Option 3&quot;,
+        &quot;Option 4&quot;,
+        &quot;Option 5&quot;,
+        &quot;Option 6&quot;,
+        &quot;Option 7&quot;,
+        &quot;Option 8&quot;,
+        &quot;Option 9&quot;,
+        &quot;Option 10&quot;
+    ],
+    &quot;maxSelections&quot;: 1,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-03-20T14:41:52.932886298&quot;,
+    &quot;multipleChoice&quot;: false
+}&#39;
+</div>

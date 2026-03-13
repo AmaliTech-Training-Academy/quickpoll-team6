@@ -1,0 +1,49 @@
+<div>POST to https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls</div>
+
+<h4>Body</h4>
+<div>
+    <pre class="preformated-text">
+{
+    &quot;question&quot;: &quot;Test Question: 456af72e-8522-4e08-b37d-dece7c153166&quot;,
+    &quot;options&quot;: [
+        &quot;Option 1&quot;,
+        &quot;Option 2&quot;,
+        &quot;Option 3&quot;
+    ],
+    &quot;description&quot;: &quot;Test Description&quot;,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-03-20T14:43:57.142974263&quot;,
+    &quot;maxSelections&quot;: 1
+}    </pre>
+</div>
+
+<h4>Headers</h4>
+<div>
+        <div>Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEzMDM1NjMzQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMzAzNiwiZXhwIjoxNzczNDk5NDM2fQ.8_azbAeMBUVkBLLN-1dtjU6Kvg429S9bL-E0kXK-hLP2Gexmta43aTKJeXmm5cLaRtNErwA1_hLVPrFXUbDDaQ</div>
+        <div>Accept: application/json, application/javascript, text/javascript, text/json</div>
+        <div>Content-Type: application/json</div>
+</div>
+
+
+
+<h4>Curl</h4>
+<div>
+curl -v -X POST &#39;https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls&#39; -H &#39;Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEzMDM1NjMzQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMzAzNiwiZXhwIjoxNzczNDk5NDM2fQ.8_azbAeMBUVkBLLN-1dtjU6Kvg429S9bL-E0kXK-hLP2Gexmta43aTKJeXmm5cLaRtNErwA1_hLVPrFXUbDDaQ&#39; -H &#39;Accept: application/json, application/javascript, text/javascript, text/json&#39; -H &#39;Content-Type: application/json&#39; -d &#39;{
+    &quot;question&quot;: &quot;Test Question: 456af72e-8522-4e08-b37d-dece7c153166&quot;,
+    &quot;options&quot;: [
+        &quot;Option 1&quot;,
+        &quot;Option 2&quot;,
+        &quot;Option 3&quot;
+    ],
+    &quot;description&quot;: &quot;Test Description&quot;,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-03-20T14:43:57.142974263&quot;,
+    &quot;maxSelections&quot;: 1
+}&#39;
+</div>

@@ -1,0 +1,47 @@
+<div>POST to https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls</div>
+
+<h4>Body</h4>
+<div>
+    <pre class="preformated-text">
+{
+    &quot;question&quot;: &quot;Schema Test Poll - Testing schema validation&quot;,
+    &quot;options&quot;: [
+        &quot;Option A&quot;,
+        &quot;Option B&quot;
+    ],
+    &quot;description&quot;: &quot;Testing schema validation&quot;,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-12-31T23:59:59Z&quot;,
+    &quot;maxSelections&quot;: 1
+}    </pre>
+</div>
+
+<h4>Headers</h4>
+<div>
+        <div>Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEyOTYxNjUxQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMjk2MiwiZXhwIjoxNzczNDk5MzYyfQ.KcYC0_q75fNz6BdkzrUF8Rh8akCFa3h2Mw0xoKTZEdqPZhtOKi4gnBnobhjdR2pm-H-jQ6AJXevMIMZLzp311g</div>
+        <div>Accept: application/json, application/javascript, text/javascript, text/json</div>
+        <div>Content-Type: application/json</div>
+</div>
+
+
+
+<h4>Curl</h4>
+<div>
+curl -v -X POST &#39;https://nonmoral-zachariah-unindignant.ngrok-free.dev/api/polls&#39; -H &#39;Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0dXNlcl8xNzczNDEyOTYxNjUxQHRlc3QuZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3MzQxMjk2MiwiZXhwIjoxNzczNDk5MzYyfQ.KcYC0_q75fNz6BdkzrUF8Rh8akCFa3h2Mw0xoKTZEdqPZhtOKi4gnBnobhjdR2pm-H-jQ6AJXevMIMZLzp311g&#39; -H &#39;Accept: application/json, application/javascript, text/javascript, text/json&#39; -H &#39;Content-Type: application/json&#39; -d &#39;{
+    &quot;question&quot;: &quot;Schema Test Poll - Testing schema validation&quot;,
+    &quot;options&quot;: [
+        &quot;Option A&quot;,
+        &quot;Option B&quot;
+    ],
+    &quot;description&quot;: &quot;Testing schema validation&quot;,
+    &quot;anonymous&quot;: false,
+    &quot;departmentIds&quot;: [
+        1
+    ],
+    &quot;expiresAt&quot;: &quot;2026-12-31T23:59:59Z&quot;,
+    &quot;maxSelections&quot;: 1
+}&#39;
+</div>
