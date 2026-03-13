@@ -44,9 +44,8 @@ export const routes: Routes = [
             canActivate: [pollCreatorGuard],
             component: PollDetailsLayoutComponent,
             children: [
-              { path: '', redirectTo: 'metrics', pathMatch: 'full' },
+              { path: '', component: PollMetricsComponent },
               { path: 'details', component: PollDetailsComponent },
-              { path: 'metrics', component: PollMetricsComponent },
             ],
           },
         ],

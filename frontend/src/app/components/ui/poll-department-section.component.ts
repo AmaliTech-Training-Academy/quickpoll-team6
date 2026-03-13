@@ -325,7 +325,7 @@ type PollAudience = 'company-wide' | 'department';
       max-width: 220px;
       border: 1px solid var(--border);
       border-radius: 9999px;
-      background-color: var(--secondary);
+      background-color: var(--background);
       color: var(--secondary-foreground);
       padding: 2px 6px 2px 10px;
       font-size: 12px;

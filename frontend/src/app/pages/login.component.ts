@@ -7,7 +7,7 @@ import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { InputComponent } from '@/components/ui/primitives/input.component';
 import { PasswordFieldComponent } from '@/components/ui/primitives/password-field.component';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeInformationSquare } from '@ng-icons/huge-icons';
+import { hugeInformationCircle } from '@ng-icons/huge-icons';
 
 @Component({
   selector: 'app-login',
@@ -20,16 +20,16 @@ import { hugeInformationSquare } from '@ng-icons/huge-icons';
     PasswordFieldComponent,
     NgIcon,
   ],
-  providers: [provideIcons({ hugeInformationSquare })],
+  providers: [provideIcons({ hugeInformationCircle })],
   template: `
     <div class="max-w-100 m-15 mx-auto flex flex-col" data-test-id="login-page">
       <h1 class="mb-8 text-xl md:text-3xl font-semibold text-center">Welcome back</h1>
       @if (error) {
         <p
-          class="flex items-center gap-2 text-muted-foreground p-2 border bg-muted rounded-md text-xs mb-8"
+          class="flex items-center justify-center gap-2 text-muted-foreground p-2 text-sm mb-8"
           data-test-id="login-error-message"
         >
-          <ng-icon name="hugeInformationSquare" size="18px" class="shrink-0 text-destructive" />
+          <ng-icon name="hugeInformationCircle" size="18px" class="shrink-0 text-destructive" />
           {{ error }}
         </p>
       }
@@ -148,7 +148,7 @@ export class LoginComponent implements OnInit {
     this.authService.login(email!, password!).subscribe({
       next: () => this.router.navigate(['/~']),
       error: (err) => {
-        this.error = 'Problem signing in: ' + err.message;
+        this.error = 'Problem signing in';
         this.loading.set(false);
       },
     });

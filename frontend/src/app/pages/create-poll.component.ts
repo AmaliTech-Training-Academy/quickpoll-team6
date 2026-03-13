@@ -537,7 +537,7 @@ export class CreatePollComponent {
     question: ['', Validators.required],
     description: [''],
     maxSelections: [1 as number | null],
-    anonymous: [true, Validators.required],
+    anonymous: [false, Validators.required],
     expiresAt: ['', Validators.required],
     audience: ['company-wide' as PollAudience, Validators.required],
     departmentIds: [[] as number[]],

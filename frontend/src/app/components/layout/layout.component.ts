@@ -8,12 +8,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
-import { DepartmentIndicatorComponent } from '@/components/ui/department-indicator.component';
-import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { UserMenuComponent } from '@/components/ui/user-menu.component';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
+import { AdminIndicatorComponent } from '@/components/ui/admin-indicator.component';
+import { DepartmentIndicatorComponent } from '@/components/ui/department-indicator.component';
 
 @Component({
   selector: 'app-layout',
@@ -25,6 +26,7 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
     DepartmentIndicatorComponent,
     ButtonComponent,
     UserMenuComponent,
+    AdminIndicatorComponent,
   ],
   template: `
     <div class="flex flex-col min-h-screen mb-12">
@@ -33,7 +35,9 @@ import { UserMenuComponent } from '@/components/ui/user-menu.component';
       >
         <header class="p-3 pb-0 gap-3 w-full flex flex-col maxview-container">
           <div class="flex items-center justify-between gap-3 p-1">
-            <app-department-indicator />
+            <div class="flex items-center">
+              <app-department-indicator /> <app-admin-indicator />
+            </div>
             <div class="flex items-center gap-2">
               <app-user-menu />
             </div>

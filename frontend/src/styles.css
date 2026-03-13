@@ -10,14 +10,14 @@
 
 @font-face {
   font-family: 'Suisse Intl';
-  src: url('/fonts/SuisseIntl-Regular.woff2') format('woff2');
+  src: url('/fonts/sans-regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Suisse Intl';
-  src: url('/fonts/SuisseIntl-Medium.woff2') format('woff2');
+  src: url('/fonts/sans-regular.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
 }
@@ -26,13 +26,6 @@
   font-family: 'Suisse Intl';
   src: url('/fonts/SuisseIntl-Semibold.woff2') format('woff2');
   font-weight: 600;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Suisse Intl';
-  src: url('/fonts/SuisseIntl-Bold.woff2') format('woff2');
-  font-weight: 700;
   font-style: normal;
 }
 
@@ -83,6 +76,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --vis-font-family: 'Akkurat Mono';
+  --vis-color-main: #4d8cfd;
+  --vis-color-main-light: #d0e0fe;
+  --vis-color-main-dark: var(--primary);
+  --vis-color-grey: #2a2a2a;
 }
 
 .dark {
