@@ -11,7 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +31,9 @@ class PollServiceTest {
     @Mock private DepartmentRepository departmentRepository;
     @Mock private PollInviteRepository pollInviteRepository;
     @Mock private VoteRepository voteRepository;
-    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private jakarta.persistence.EntityManager entityManager;
+    @Mock private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
 
     @InjectMocks
     private PollService pollService;

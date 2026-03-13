@@ -1,6 +1,8 @@
 package com.amalitech.quickpoll.controller;
 
 import com.amalitech.quickpoll.dto.*;
+import com.amalitech.quickpoll.dto.analytics.PollResultsResponse;
+import com.amalitech.quickpoll.dto.analytics.PollResultsTimeseriesResponse;
 import com.amalitech.quickpoll.model.User;
 import com.amalitech.quickpoll.service.PollService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/polls")
@@ -61,7 +65,7 @@ public class PollController {
     public ResponseEntity<PollResponse> createPoll(
             @Valid @RequestBody PollRequest request,
             @AuthenticationPrincipal User creator) {
-        return ResponseEntity.ok(pollService.createPoll(request, creator));
+        return ResponseEntity.status(HttpStatus.CREATED).body(pollService.createPoll(request, creator));
     }
 
     @PutMapping("/{id}/close")
@@ -78,8 +82,18 @@ public class PollController {
     }
 
     @GetMapping("/{id}/results")
-    @Operation(summary = "Get poll results", description = "Retrieve poll results with vote counts and percentages (Creator or Admin only)")
-    public ResponseEntity<PollResponse> getPollResults(@PathVariable Long id, @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(pollService.getPollResults(id, user));
+    @Operation(summary = "Get poll results", description = "Retrieve rich poll results with vote counts and percentages from OLAP (Creator, Admin, or Entitled Participant)")
+    public ResponseEntity<PollResultsResponse> getPollResults(@PathVariable Long id, @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(pollService.getPollAnalyticsResults(id, user));
+    }
+
+    @GetMapping("/{id}/results/timeseries")
+    @Operation(summary = "Get poll voting timeseries", description = "Retrieve hourly voting buckets for a poll (Creator, Admin, or Entitled Participant)")
+    public ResponseEntity<PollResultsTimeseriesResponse> getPollTimeseries(
+            @PathVariable Long id,
+            @RequestParam(required = false) LocalDateTime from,
+            @RequestParam(required = false) LocalDateTime to,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(pollService.getPollTimeseries(id, user, from, to));
     }
 }
