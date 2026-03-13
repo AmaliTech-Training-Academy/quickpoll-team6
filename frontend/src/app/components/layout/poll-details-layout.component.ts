@@ -5,6 +5,8 @@ import { PollService } from '@/services/poll.service';
 import { ContentHeaderComponent } from '../ui/content-header.component';
 import { ButtonComponent } from '../ui/primitives/button.component';
 import { DialogComponent } from '../ui/primitives/dialog.component';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { hugeSquareLock01 } from '@ng-icons/huge-icons';
 
 @Component({
   selector: 'app-poll-details-layout',
@@ -15,7 +17,9 @@ import { DialogComponent } from '../ui/primitives/dialog.component';
     ButtonComponent,
     DialogComponent,
     NgpDialogTrigger,
+    NgIcon,
   ],
+  providers: [provideIcons({ hugeSquareLock01 })],
   template: `
     <app-content-header pageTitle="Poll Metrics">
       <div class="flex items-center gap-2">
@@ -30,11 +34,11 @@ import { DialogComponent } from '../ui/primitives/dialog.component';
         </button>
         <button
           app-button
-          variant="outline"
           [ngpDialogTrigger]="closePollDialog"
           [disabled]="isClosing()"
           data-test-id="poll-details-close-poll-button"
         >
+          <ng-icon name="hugeSquareLock01" />
           Close poll
         </button>
       </div>

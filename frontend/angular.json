@@ -61,7 +61,10 @@
               "buildTarget": "frontend:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "allowedHosts": ["port-4200.henryantwi.me"]
+          }
         },
         "test": {
           "builder": "@angular/build:unit-test"

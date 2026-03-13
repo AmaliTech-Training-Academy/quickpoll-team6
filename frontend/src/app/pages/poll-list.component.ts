@@ -179,7 +179,7 @@ export class PollListComponent implements OnInit {
   protected onScroll(): void {
     const scrollPosition = window.innerHeight + window.scrollY;
     const documentHeight = document.documentElement.scrollHeight;
-    const threshold = 200;
+    const threshold = 400;
 
     if (scrollPosition >= documentHeight - threshold) {
       this.loadMore();

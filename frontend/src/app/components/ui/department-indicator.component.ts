@@ -1,11 +1,11 @@
-import { AsyncPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeBuilding06 } from '@ng-icons/huge-icons';
 import { map } from 'rxjs';
+import { AsyncPipe } from '@angular/common';
+import { hugeBuilding06 } from '@ng-icons/huge-icons';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import { ButtonComponent } from '@/components/ui/primitives/button.component';
 import { AuthService } from '@/services/auth.service';
+import { ButtonComponent } from '@/components/ui/primitives/button.component';
 
 @Component({
   selector: 'app-department-indicator',

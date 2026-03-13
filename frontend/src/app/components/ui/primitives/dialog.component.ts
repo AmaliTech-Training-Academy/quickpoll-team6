@@ -32,7 +32,7 @@ import {
   `,
   styles: `
     :host {
-      background-color: rgb(0 0 0 / 0.4);
+      background-color: rgb(0 0 0 / 0.6);
       backdrop-filter: blur(1px);
       position: fixed;
       inset: 0;
@@ -88,7 +88,7 @@ import {
     [ngpDialogTitle] {
       font-size: 1.5rem;
       line-height: 1.2;
-      font-weight: 600;
+      font-weight: 500;
       letter-spacing: -0.02em;
       color: var(--foreground);
       margin: 0;

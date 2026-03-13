@@ -1,24 +1,25 @@
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   computed,
   inject,
   input,
   OnInit,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { hugeView, hugeSquareLock02, hugeUser } from '@ng-icons/huge-icons';
-import { User, Poll, PollOption } from '@/models';
+import { hugeView, hugeSquareLock02, hugeUser, hugeCancel01 } from '@ng-icons/huge-icons';
+import { User, Poll } from '@/models';
 import { AuthService } from '@/services/auth.service';
 import { ButtonComponent } from './primitives/button.component';
+import { PollService } from '@/services/poll.service';
 
 @Component({
   selector: 'app-poll-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, NgIcon, RouterLink],
-  providers: [provideIcons({ hugeView, hugeSquareLock02, hugeUser })],
+  providers: [provideIcons({ hugeView, hugeSquareLock02, hugeUser, hugeCancel01 })],
   template: `
     <div
       class="bg-surface border shadow-xs rounded-xl p-3 sm:p-5 sm:py-6"
@@ -81,44 +82,107 @@ import { ButtonComponent } from './primitives/button.component';
       <ul class="mt-4 space-y-3" [attr.data-test-id]="'poll-card-options-list-' + poll().id">
         @for (opt of poll().options; track opt.id) {
           <li [attr.data-test-id]="'poll-card-option-item-' + poll().id + '-' + opt.id">
-            <button
-              app-button
-              variant="outline"
-              class="gap-3 text-xs w-full justify-start! font-normal!"
+            <div
+              [class.border-primary]="selections().includes(opt.id)"
+              [class.opacity-50]="maxSelectionsReached() && !selections().includes(opt.id)"
+              [class.cursor-not-allowed]="maxSelectionsReached() && !selections().includes(opt.id)"
+              [class.pointer-events-none]="maxSelectionsReached() && !selections().includes(opt.id)"
+              class="gap-3 text-left px-3 h-12 pr-2 rounded-md text-xs w-full flex items-center justify-between font-normal border hover:border-primary/40"
+              (click)="addSelection(opt.id)"
             >
-              <span class="text-foreground">{{ optionLabel(opt) }}</span>
-            </button>
+              <span class="text-foreground">{{ opt.text }}</span>
+              @if (selections().includes(opt.id)) {
+                <div class="flex items-center gap-1">
+                  <button
+                    app-button
+                    variant="outline"
+                    size="sm"
+                    class="size-9! p-0!"
+                    (click)="removeSelection(opt.id); $event.stopPropagation()"
+                  >
+                    <ng-icon name="hugeCancel01" />
+                  </button>
+                </div>
+              }
+            </div>
           </li>
+        }
+        @if (selections().length > 0) {
+          <div class="text-xs text-muted-foreground mt-2">
+            {{ selections().length }} selected (max {{ poll().maxSelections }})
+          </div>
+        }
+        @if (selections().length > 0) {
+          <button app-button variant="primary" (click)="castVote()" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              Submitting...
+            } @else {
+              Submit
+            }
+          </button>
         }
       </ul>
     </div>
   `,
 })
 export class PollCardComponent implements OnInit {
+  currentUser = signal<User | null>(null);
+
   readonly poll = input.required<Poll>();
-  currentUser: User | null = null;
+
   private authService = inject(AuthService);
-  private cdr = inject(ChangeDetectorRef);
+  readonly pollService = inject(PollService);
+
+  protected readonly selections = signal<number[]>([]);
+  protected readonly isSubmitting = signal(false);
+
+  protected readonly maxSelectionsReached = computed(() => {
+    const poll = this.poll();
+    const currentSelections = this.selections();
+    return currentSelections.length >= poll.maxSelections;
+  });
+
+  protected addSelection(opt: number) {
+    if (this.maxSelectionsReached() && !this.selections().includes(opt)) {
+      return;
+    }
+    this.selections.update((prev) => [...prev, opt]);
+  }
+
+  protected removeSelection(opt: number) {
+    this.selections.update((prev) => prev.filter((id) => id !== opt));
+  }
 
   protected readonly creatorLabel = computed(() => {
     const poll = this.poll();
     return poll.creatorName;
   });
 
-  protected optionLabel(option: PollOption): string {
-    return option.text;
+  protected castVote() {
+    if (!this.selections() || this.isSubmitting()) {
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.pollService.castVote(this.poll().id, this.selections()!).subscribe({
+      error: (error) => {
+        console.error('Error casting vote:', error);
+      },
+      complete: () => {
+        this.isSubmitting.set(false);
+      },
+    });
   }
 
   protected userIsOwner = computed(() => {
     const poll = this.poll();
-    return poll.creatorEmail === this.currentUser?.email;
+    return poll.creatorEmail === this.currentUser()?.email;
   });
 
   ngOnInit() {
     this.authService.getProfile().subscribe({
       next: (user) => {
-        this.currentUser = user;
-        this.cdr.markForCheck();
+        this.currentUser.set(user);
       },
     });
   }

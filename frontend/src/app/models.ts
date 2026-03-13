@@ -38,7 +38,7 @@ export interface Poll {
   expiresAt: string;
   createdAt: string;
   status: string;
-  options: PollOption[]
+  options: PollOption[];
 }
 
 export interface PollOption {
@@ -65,10 +65,10 @@ export interface Vote {
 }
 
 export interface PollResultOption {
-  id: number;
-  text: string;
+  optionId: number;
+  optionText: string;
   voteCount: number;
-  percentage: number;
+  votePercentage: number;
 }
 
 export interface PollResult {
@@ -83,6 +83,8 @@ export interface PollResult {
   createdAt: string;
   totalVotes: number;
   options: PollResultOption[];
+  uniqueVoters: number;
+  participationRate: number;
 }
 
 export interface ClosePollOption {
@@ -105,4 +107,38 @@ export interface ClosePollResponse {
   totalVotes: number;
   invitedDepartments: string[];
   options: ClosePollOption[];
+}
+
+export interface PollAnalyticsOption {
+  optionId: number;
+  optionText: string;
+  voteCount: number;
+  votePercentage: number;
+}
+
+export interface PollAnalyticsResult {
+  pollId: number;
+  title: string;
+  description: string | null;
+  creatorId: number;
+  creatorName: string;
+  status: 'ACTIVE' | 'CLOSED';
+  maxSelections: number;
+  createdAt: string | null;
+  expiresAt: string | null;
+  totalVotes: number;
+  uniqueVoters: number;
+  participationRate: number;
+  lastUpdated: string | null;
+  options: PollAnalyticsOption[];
+}
+
+export interface TimeseriesPoint {
+  bucketTime: string;
+  votesInBucket: number;
+}
+
+export interface PollTimeseriesResponse {
+  pollId: number;
+  points: TimeseriesPoint[];
 }
